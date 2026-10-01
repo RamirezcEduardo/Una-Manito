@@ -1,7 +1,7 @@
 {
   "name": "Una Manito",
   "short_name": "Una Manito",
-  "description": "Te damos una manito en tu hogar, al toque.",
+  "description": "Te damos una manito, al toque.",
   "lang": "es-PE",
   "start_url": "/",
   "display": "standalone",

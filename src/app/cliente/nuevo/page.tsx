@@ -41,7 +41,7 @@ function Formulario() {
 
   return (
     <Pantalla>
-      <div className="flex items-center gap-3"><span className="text-4xl">{servicio.icono}</span><h2 className="text-2xl font-extrabold">{servicio.nombre}</h2></div>
+      <div className="flex items-center gap-3"><span className="text-4xl">{servicio.icono}</span><div><h2 className="text-2xl font-extrabold">{servicio.nombre}</h2><p className="font-semibold text-marca-oscuro">{servicio.eslogan}</p></div></div>
 
       <section className="tarjeta space-y-3">
         <h3 className="text-lg font-bold">📍 ¿Dónde?</h3>

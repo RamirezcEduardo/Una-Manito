@@ -30,7 +30,7 @@ const SEMILLA: Datos = {
   sesion: null,
 };
 
-const CLAVE = "una-manito-demo-v1";
+const CLAVE = "una-manito-demo-v2";
 const nuevoId = (p: string) => p + Math.random().toString(36).slice(2, 8);
 
 interface Api extends Datos {

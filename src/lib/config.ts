@@ -1,14 +1,14 @@
 import type { Config, EstadoPedido, Servicio } from "./tipos";
 
-export const ESLOGAN_CLIENTE = "Te damos una manito en tu hogar, al toque.";
+export const ESLOGAN_CLIENTE = "Te damos una manito, al toque."; // general; cada servicio tiene el suyo
 export const ESLOGAN_SOCIA = "Te damos una manito para crecer.";
 
 export const SERVICIOS_INICIALES: Servicio[] = [
-  { id: "limpieza", nombre: "Limpieza del hogar", icono: "🧹", activo: true, precioHora: 15, horasMin: 3, recargoMateriales: 10 },
-  { id: "gasfiteria", nombre: "Gasfitería", icono: "🔧", activo: false, precioHora: 35, horasMin: 1, recargoMateriales: 0 },
-  { id: "electricidad", nombre: "Electricidad", icono: "💡", activo: false, precioHora: 35, horasMin: 1, recargoMateriales: 0 },
-  { id: "lavado_autos", nombre: "Lavado de autos", icono: "🚗", activo: false, precioHora: 25, horasMin: 1, recargoMateriales: 5 },
-  { id: "piscinas", nombre: "Limpieza de piscinas", icono: "🏊", activo: false, precioHora: 30, horasMin: 2, recargoMateriales: 15 },
+  { id: "limpieza", nombre: "Limpieza del hogar", icono: "🧹", eslogan: "Te damos una manito en tu hogar, al toque.", activo: true, precioHora: 15, horasMin: 3, recargoMateriales: 10 },
+  { id: "gasfiteria", nombre: "Gasfitería", icono: "🔧", eslogan: "Te damos una manito con tus caños, al toque.", activo: false, precioHora: 35, horasMin: 1, recargoMateriales: 0 },
+  { id: "electricidad", nombre: "Electricidad", icono: "💡", eslogan: "Te damos una manito con la luz, al toque.", activo: false, precioHora: 35, horasMin: 1, recargoMateriales: 0 },
+  { id: "lavado_autos", nombre: "Lavado de autos", icono: "🚗", eslogan: "Te damos una manito con tu auto, al toque.", activo: false, precioHora: 25, horasMin: 1, recargoMateriales: 5 },
+  { id: "piscinas", nombre: "Limpieza de piscinas", icono: "🏊", eslogan: "Te damos una manito con tu piscina, al toque.", activo: false, precioHora: 30, horasMin: 2, recargoMateriales: 15 },
 ];
 
 export const DISTRITOS_LIMA = [

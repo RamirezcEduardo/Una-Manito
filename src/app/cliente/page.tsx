@@ -31,6 +31,7 @@ export default function InicioCliente() {
             s.activo ? (
               <Link key={s.id} href={`/cliente/nuevo?servicio=${s.id}`} className="tarjeta flex flex-col items-center gap-2 text-center ring-2 ring-marca">
                 <span className="text-5xl">{s.icono}</span><span className="font-bold">{s.nombre}</span>
+                <span className="text-sm text-marca-oscuro">{s.eslogan}</span>
                 <span className="text-sm text-suave">desde {soles(s.precioHora)}/hora</span>
               </Link>
             ) : (

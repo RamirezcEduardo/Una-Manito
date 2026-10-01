@@ -6,6 +6,7 @@ export interface Servicio {
   id: ServicioId;
   nombre: string;
   icono: string;
+  eslogan: string;
   activo: boolean;
   precioHora: number; // soles
   horasMin: number;
