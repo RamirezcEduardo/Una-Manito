@@ -1,0 +1,11 @@
+{
+  "name": "Una Manito",
+  "short_name": "Una Manito",
+  "description": "Te damos una manito, al toque.",
+  "lang": "es-PE",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fbfaf7",
+  "theme_color": "#0e9aa7",
+  "icons": [{ "src": "/icono.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@theme {
+  --color-marca: #0e9aa7;
+  --color-marca-oscuro: #0a6f78;
+  --color-marca-claro: #e3f6f7;
+  --color-acento: #f6a01a;
+  --color-acento-claro: #fff4e0;
+  --color-tinta: #1f2a33;
+  --color-suave: #5b6b76;
+  --color-fondo: #fbfaf7;
+}
+
+body {
+  background: var(--color-fondo);
+  color: var(--color-tinta);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 17px;
+}
+
+@utility btn {
+  @apply w-full rounded-2xl px-5 py-4 text-lg font-bold transition active:scale-[.98] disabled:opacity-50;
+}
+@utility btn-primario { @apply btn bg-marca text-white shadow-md hover:bg-marca-oscuro; }
+@utility btn-acento { @apply btn bg-acento text-tinta shadow-md; }
+@utility btn-borde { @apply btn border-2 border-marca text-marca bg-white; }
+@utility tarjeta { @apply rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5; }
+@utility campo { @apply w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-lg focus:border-marca focus:outline-none; }
+@utility etiqueta { @apply mb-1 block font-semibold; }
