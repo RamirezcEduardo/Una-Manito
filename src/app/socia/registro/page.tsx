@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Cabecera, Opcion, Pantalla } from "@/components/ui";
+import { useMemo, useState } from "react";
+import { Cabecera, Opcion, Pantalla, accion } from "@/components/ui";
 import { ESLOGAN_SOCIA } from "@/lib/config";
 import { useDatos } from "@/lib/store";
 import type { ServicioId } from "@/lib/tipos";
@@ -12,7 +12,8 @@ export default function RegistroSocia() {
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
   const [dni, setDni] = useState("");
-  const [foto, setFoto] = useState("");
+  const [foto, setFoto] = useState<File | null>(null);
+  const vista = useMemo(() => (foto ? URL.createObjectURL(foto) : ""), [foto]);
   const [distritos, setDistritos] = useState<string[]>([]);
   const [servicios, setServicios] = useState<ServicioId[]>(["limpieza"]);
   const toggle = <T,>(arr: T[], v: T) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
@@ -23,7 +24,7 @@ export default function RegistroSocia() {
       <Cabecera titulo="Quiero ser socia" volver="/" />
       <Pantalla>
         <p className="text-lg text-suave">{ESLOGAN_SOCIA}</p>
-        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); registrarSocia({ nombre, telefono, dni, foto, distritos, servicios }); router.push("/socia"); }}>
+        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (foto) accion(async () => { await registrarSocia({ nombre, telefono, dni, foto, distritos, servicios }); router.push("/socia"); }); }}>
           <div className="tarjeta space-y-3">
             <h3 className="text-lg font-bold">Tus datos</h3>
             <input className="campo" placeholder="Nombre completo" value={nombre} onChange={(e) => setNombre(e.target.value)} />
@@ -34,10 +35,10 @@ export default function RegistroSocia() {
             <h3 className="text-lg font-bold">Tu foto</h3>
             <label className="flex cursor-pointer items-center gap-4">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              {foto ? <img src={foto} alt="" className="h-20 w-20 rounded-full object-cover" /> : <span className="flex h-20 w-20 items-center justify-center rounded-full bg-marca-claro text-3xl">📷</span>}
+              {foto ? <img src={vista} alt="" className="h-20 w-20 rounded-full object-cover" /> : <span className="flex h-20 w-20 items-center justify-center rounded-full bg-marca-claro text-3xl">📷</span>}
               <span className="font-semibold text-marca">{foto ? "Cambiar foto" : "Tomar o subir foto"}</span>
               <input type="file" accept="image/*" capture="user" className="hidden"
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) setFoto(URL.createObjectURL(f)); }} />
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) setFoto(f); }} />
             </label>
           </div>
           <div className="tarjeta space-y-3">

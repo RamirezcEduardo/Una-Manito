@@ -2,7 +2,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { Mapa } from "@/components/MapaDinamico";
-import { Cabecera, Opcion, Pantalla } from "@/components/ui";
+import { Cabecera, Opcion, Pantalla, accion } from "@/components/ui";
 import { LIMA, calcularPrecio, soles } from "@/lib/config";
 import { useDatos } from "@/lib/store";
 import type { ServicioId } from "@/lib/tipos";
@@ -31,13 +31,13 @@ function Formulario() {
   const usarMiUbicacion = () =>
     navigator.geolocation?.getCurrentPosition((p) => setPos({ lat: p.coords.latitude, lng: p.coords.longitude }));
 
-  const enviar = () => {
-    const id = crearPedido({
+  const enviar = () => accion(async () => {
+    const id = await crearPedido({
       servicio: servicio.id, ubicacion: { direccion, distrito, referencia, ...pos },
       fecha: cuando === "asap" ? "asap" : fecha, horas, conMateriales, notas, total,
     });
     router.push(`/cliente/pedido/${id}`);
-  };
+  });
 
   return (
     <Pantalla>

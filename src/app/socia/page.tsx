@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Cabecera, EstadoBadge, Pantalla } from "@/components/ui";
+import { Cabecera, EstadoBadge, Pantalla, accion } from "@/components/ui";
 import { ESLOGAN_SOCIA, soles } from "@/lib/config";
 import { useDatos } from "@/lib/store";
 
@@ -38,7 +38,7 @@ export default function PanelSocia() {
       <Cabecera titulo={`Hola, ${yo.nombre.split(" ")[0]}`} />
       <Pantalla>
         <p className="text-suave">{ESLOGAN_SOCIA}</p>
-        <button onClick={() => setDisponible(!yo.disponible)}
+        <button onClick={() => accion(() => setDisponible(!yo.disponible))}
           className={`btn py-6 text-xl ${yo.disponible ? "bg-green-500 text-white" : "bg-gray-200 text-tinta"}`}>
           {yo.disponible ? "🟢 Estoy disponible" : "⚪ No disponible — tocar para activar"}
         </button>
@@ -65,7 +65,7 @@ export default function PanelSocia() {
               <div className="flex justify-between"><b>{s.icono} {s.nombre}</b><b className="text-marca">{soles(p.total * (1 - p.comisionPct / 100))}</b></div>
               <p className="text-suave">📍 {p.ubicacion.distrito} · 🕒 {p.fecha === "asap" ? "Lo antes posible" : new Date(p.fecha).toLocaleString("es-PE")}</p>
               <p className="text-suave">⏱️ {p.horas} h · 🧴 {p.conMateriales ? "Llevas tus materiales" : "Materiales del cliente"}</p>
-              <button className="btn-primario" onClick={() => { if (aceptarPedido(p.id)) router.push(`/socia/pedido/${p.id}`); else alert("Otra socia ya tomó este pedido."); }}>Aceptar pedido</button>
+              <button className="btn-primario" onClick={() => accion(async () => { if (await aceptarPedido(p.id)) router.push(`/socia/pedido/${p.id}`); else alert("Otra socia ya tomó este pedido."); })}>Aceptar pedido</button>
             </div>
           );
         })}

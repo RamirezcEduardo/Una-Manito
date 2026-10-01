@@ -53,7 +53,7 @@ export interface Socia {
   id: string;
   nombre: string;
   telefono: string;
-  dni: string;
+  dni?: string; // solo visible para la propia socia y el admin
   foto: string;
   distritos: string[];
   servicios: ServicioId[];

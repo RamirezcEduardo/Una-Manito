@@ -1,21 +1,13 @@
 "use client";
-// Almacén de datos simulado (localStorage) para el bosquejo del frontend.
-// Todas las pantallas usan solo este hook: al conectar Supabase se reemplaza
-// la implementación de estas funciones sin tocar las pantallas.
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+// Capa de datos. Todas las pantallas usan solo el hook useDatos().
+// - Con NEXT_PUBLIC_SUPABASE_URL/ANON_KEY: datos reales en Supabase (ver store-supabase.tsx).
+// - Sin credenciales: modo demostración con datos guardados en el navegador.
+import { useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { Ctx, type Api, type Datos } from "./api";
 import { CONFIG_INICIAL } from "./config";
-import type { Calificacion, Cliente, Config, EstadoPedido, MetodoPago, Pedido, Socia } from "./tipos";
-
-type Rol = "cliente" | "socia" | "admin";
-interface Sesion { rol: Rol; id: string }
-
-interface Datos {
-  config: Config;
-  clientes: Cliente[];
-  socias: Socia[];
-  pedidos: Pedido[];
-  sesion: Sesion | null;
-}
+import { MODO_DEMO } from "./supabase";
+import { SupabaseProvider } from "./store-supabase";
+import type { EstadoPedido, Pedido } from "./tipos";
 
 const SEMILLA: Datos = {
   config: CONFIG_INICIAL,
@@ -32,28 +24,9 @@ const SEMILLA: Datos = {
 
 const CLAVE = "una-manito-demo-v2";
 const nuevoId = (p: string) => p + Math.random().toString(36).slice(2, 8);
+const SIGUIENTE: Partial<Record<EstadoPedido, EstadoPedido>> = { aceptado: "en_camino", en_camino: "en_curso", en_curso: "terminado" };
 
-interface Api extends Datos {
-  listo: boolean;
-  entrar: (rol: Rol, id: string) => void;
-  salir: () => void;
-  registrarCliente: (c: Omit<Cliente, "id">) => void;
-  registrarSocia: (s: Omit<Socia, "id" | "estado" | "disponible" | "calificacion" | "serviciosHechos">) => void;
-  crearPedido: (p: Omit<Pedido, "id" | "estado" | "pago" | "creadoEn" | "clienteId" | "comisionPct">) => string;
-  aceptarPedido: (pedidoId: string) => boolean;
-  cambiarEstado: (pedidoId: string, estado: EstadoPedido) => void;
-  marcarPagado: (pedidoId: string, metodo: MetodoPago) => void;
-  confirmarPago: (pedidoId: string) => void;
-  calificar: (pedidoId: string, quien: "socia" | "cliente", c: Calificacion) => void;
-  setDisponible: (v: boolean) => void;
-  setEstadoSocia: (id: string, estado: Socia["estado"]) => void;
-  setConfig: (c: Config) => void;
-  reiniciar: () => void;
-}
-
-const Ctx = createContext<Api | null>(null);
-
-export function DatosProvider({ children }: { children: ReactNode }) {
+function DemoProvider({ children }: { children: ReactNode }) {
   const [d, setD] = useState<Datos>(SEMILLA);
   const [listo, setListo] = useState(false);
 
@@ -75,17 +48,22 @@ export function DatosProvider({ children }: { children: ReactNode }) {
   const api: Api = {
     ...d,
     listo,
+    demo: true,
+    sinPerfil: false,
     entrar: (rol, id) => mod((x) => ({ ...x, sesion: { rol, id } })),
-    salir: () => mod((x) => ({ ...x, sesion: null })),
-    registrarCliente: (c) => {
+    enviarCodigo: async () => {},
+    verificarCodigo: async () => {},
+    salir: async () => mod((x) => ({ ...x, sesion: null })),
+    registrarCliente: async (c) => {
       const id = nuevoId("c");
       mod((x) => ({ ...x, clientes: [...x.clientes, { ...c, id }], sesion: { rol: "cliente", id } }));
     },
-    registrarSocia: (s) => {
+    registrarSocia: async (s) => {
       const id = nuevoId("s");
-      mod((x) => ({ ...x, socias: [...x.socias, { ...s, id, estado: "pendiente", disponible: false, calificacion: 0, serviciosHechos: 0 }], sesion: { rol: "socia", id } }));
+      const foto = typeof s.foto === "string" ? s.foto : URL.createObjectURL(s.foto);
+      mod((x) => ({ ...x, socias: [...x.socias, { ...s, foto, id, estado: "pendiente", disponible: false, calificacion: 0, serviciosHechos: 0 }], sesion: { rol: "socia", id } }));
     },
-    crearPedido: (p) => {
+    crearPedido: async (p) => {
       const id = nuevoId("p");
       mod((x) => ({
         ...x,
@@ -93,25 +71,29 @@ export function DatosProvider({ children }: { children: ReactNode }) {
       }));
       return id;
     },
-    aceptarPedido: (pedidoId) => {
-      // En Supabase esto será un UPDATE ... WHERE estado = 'buscando' (el primero gana).
+    aceptarPedido: async (pedidoId) => {
       const p = d.pedidos.find((x) => x.id === pedidoId);
       if (!p || p.estado !== "buscando") return false;
       modPedido(pedidoId, (p) => (p.estado === "buscando" ? { ...p, estado: "aceptado", sociaId: d.sesion!.id } : p));
       return true;
     },
-    cambiarEstado: (id, estado) => modPedido(id, (p) => ({ ...p, estado })),
-    marcarPagado: (id, metodo) => modPedido(id, (p) => ({ ...p, pago: { metodo, estado: "marcado_pagado" } })),
-    confirmarPago: (id) => modPedido(id, (p) => ({ ...p, pago: { ...p.pago, estado: "confirmado" } })),
-    calificar: (id, quien, c) =>
+    avanzarPedido: async (id) => modPedido(id, (p) => ({ ...p, estado: SIGUIENTE[p.estado] ?? p.estado })),
+    cancelarPedido: async (id) => modPedido(id, (p) => ({ ...p, estado: "cancelado" })),
+    marcarPagado: async (id, metodo) => modPedido(id, (p) => ({ ...p, pago: { metodo, estado: "marcado_pagado" } })),
+    confirmarPago: async (id) => modPedido(id, (p) => ({ ...p, pago: { ...p.pago, estado: "confirmado" } })),
+    calificar: async (id, quien, c) =>
       modPedido(id, (p) => (quien === "socia" ? { ...p, calificacionSocia: c } : { ...p, calificacionCliente: c })),
-    setDisponible: (v) => mod((x) => ({ ...x, socias: x.socias.map((s) => (s.id === x.sesion?.id ? { ...s, disponible: v } : s)) })),
-    setEstadoSocia: (id, estado) => mod((x) => ({ ...x, socias: x.socias.map((s) => (s.id === id ? { ...s, estado } : s)) })),
-    setConfig: (config) => mod((x) => ({ ...x, config })),
+    setDisponible: async (v) => mod((x) => ({ ...x, socias: x.socias.map((s) => (s.id === x.sesion?.id ? { ...s, disponible: v } : s)) })),
+    setEstadoSocia: async (id, estado) => mod((x) => ({ ...x, socias: x.socias.map((s) => (s.id === id ? { ...s, estado } : s)) })),
+    setConfig: async (config) => mod((x) => ({ ...x, config })),
     reiniciar: () => setD(SEMILLA),
   };
 
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;
+}
+
+export function DatosProvider({ children }: { children: ReactNode }) {
+  return MODO_DEMO ? <DemoProvider>{children}</DemoProvider> : <SupabaseProvider>{children}</SupabaseProvider>;
 }
 
 export function useDatos() {

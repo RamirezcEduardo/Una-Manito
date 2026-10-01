@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Cabecera, EstadoBadge, Pantalla } from "@/components/ui";
+import { Cabecera, EstadoBadge, Pantalla, accion } from "@/components/ui";
 import { ETIQUETA_ESTADO, soles } from "@/lib/config";
 import { useDatos } from "@/lib/store";
 import type { EstadoPedido } from "@/lib/tipos";
@@ -61,14 +61,14 @@ function Socias() {
           <div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={s.foto} alt="" className="h-14 w-14 rounded-full object-cover" />
-            <div className="flex-1"><b>{s.nombre}</b><p className="text-sm text-suave">DNI {s.dni} · {s.telefono}</p></div>
+            <div className="flex-1"><b>{s.nombre}</b><p className="text-sm text-suave">{s.dni && `DNI ${s.dni} · `}{s.telefono}</p></div>
             <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-semibold capitalize">{s.estado}</span>
           </div>
           <p className="text-sm text-suave">📍 {s.distritos.join(", ")}</p>
           {s.estado === "pendiente" && (
             <div className="grid grid-cols-2 gap-2">
-              <button className="btn bg-green-500 py-3 text-white" onClick={() => setEstadoSocia(s.id, "aprobada")}>Aprobar</button>
-              <button className="btn bg-red-100 py-3 text-red-700" onClick={() => setEstadoSocia(s.id, "rechazada")}>Rechazar</button>
+              <button className="btn bg-green-500 py-3 text-white" onClick={() => accion(() => setEstadoSocia(s.id, "aprobada"))}>Aprobar</button>
+              <button className="btn bg-red-100 py-3 text-red-700" onClick={() => accion(() => setEstadoSocia(s.id, "rechazada"))}>Rechazar</button>
             </div>
           )}
         </div>
@@ -100,7 +100,7 @@ function Pedidos() {
 }
 
 function Ajustes() {
-  const { config, setConfig, reiniciar } = useDatos();
+  const { config, setConfig, reiniciar, demo } = useDatos();
   const [c, setC] = useState(config);
   return (
     <>
@@ -130,8 +130,8 @@ function Ajustes() {
           ))}
         </div>
       </div>
-      <button className="btn-primario" onClick={() => { setConfig(c); alert("Ajustes guardados"); }}>Guardar ajustes</button>
-      <button className="w-full text-sm text-suave underline" onClick={reiniciar}>Reiniciar datos de demostración</button>
+      <button className="btn-primario" onClick={() => accion(async () => { await setConfig(c); alert("Ajustes guardados"); })}>Guardar ajustes</button>
+      {demo && <button className="w-full text-sm text-suave underline" onClick={reiniciar}>Reiniciar datos de demostración</button>}
     </>
   );
 }

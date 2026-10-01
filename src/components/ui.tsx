@@ -1,12 +1,27 @@
 "use client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { ETIQUETA_ESTADO } from "@/lib/config";
 import type { Calificacion, EstadoPedido } from "@/lib/tipos";
 import { useDatos } from "@/lib/store";
 
+/** Ejecuta una acción y muestra el error en palabras simples si falla. */
+export async function accion(f: () => Promise<unknown>) {
+  try { await f(); } catch (e) { alert(mensajeError(e)); }
+}
+
+export function mensajeError(e: unknown) {
+  const m = e instanceof Error ? e.message : "";
+  if (!m || /fetch|network/i.test(m)) return "No pudimos conectarnos. Revisa tu internet e inténtalo de nuevo.";
+  if (/token has expired|invalid/i.test(m)) return "El código no es correcto o ya venció. Pide uno nuevo.";
+  if (/rate limit/i.test(m)) return "Pediste muchos códigos seguidos. Espera un minuto e inténtalo otra vez.";
+  return m;
+}
+
 export function Cabecera({ titulo, volver }: { titulo: string; volver?: string }) {
-  const { salir } = useDatos();
+  const { salir, sesion, sinPerfil } = useDatos();
+  const router = useRouter();
   return (
     <header className="sticky top-0 z-[1000] flex items-center gap-3 bg-marca px-4 py-4 text-white shadow">
       {volver && (
@@ -15,7 +30,7 @@ export function Cabecera({ titulo, volver }: { titulo: string; volver?: string }
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/simbolo.png" alt="" className="h-8 w-8 rounded-full bg-white p-0.5" />
       <h1 className="flex-1 truncate text-xl font-extrabold">{titulo}</h1>
-      <Link href="/" onClick={salir} className="rounded-full bg-white/20 px-3 py-1 text-sm font-semibold">Salir</Link>
+      {(sesion || sinPerfil) && <button onClick={async () => { await salir(); router.push("/"); }} className="rounded-full bg-white/20 px-3 py-1 text-sm font-semibold">Salir</button>}
     </header>
   );
 }

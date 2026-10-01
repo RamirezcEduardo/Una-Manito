@@ -1,7 +1,7 @@
 "use client";
 import { use } from "react";
 import { Mapa } from "@/components/MapaDinamico";
-import { Cabecera, EstadoBadge, Estrellas, FormCalificar, Pantalla } from "@/components/ui";
+import { Cabecera, EstadoBadge, Estrellas, FormCalificar, Pantalla, accion } from "@/components/ui";
 import { soles } from "@/lib/config";
 import { useDatos } from "@/lib/store";
 import type { EstadoPedido, MetodoPago } from "@/lib/tipos";
@@ -11,7 +11,7 @@ const PASO_TEXTO = ["Buscando", "Aceptado", "En camino", "En curso", "Terminado"
 
 export default function DetallePedido({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { pedidos, socias, cambiarEstado, marcarPagado, calificar, listo } = useDatos();
+  const { pedidos, socias, cancelarPedido, marcarPagado, calificar, listo } = useDatos();
   const p = pedidos.find((x) => x.id === id);
   if (!listo) return null;
   if (!p) return (<><Cabecera titulo="Pedido" volver="/cliente" /><Pantalla><p>No encontramos este pedido.</p></Pantalla></>);
@@ -57,14 +57,14 @@ export default function DetallePedido({ params }: { params: Promise<{ id: string
           <p className="text-xl font-extrabold">Total: {soles(p.total)}</p>
         </div>
 
-        {p.estado === "terminado" && <Pago estado={p.pago.estado} metodo={p.pago.metodo} onPagar={(m) => marcarPagado(p.id, m)} />}
+        {p.estado === "terminado" && <Pago estado={p.pago.estado} metodo={p.pago.metodo} onPagar={(m) => accion(() => marcarPagado(p.id, m))} />}
 
         {p.estado === "terminado" && socia && (p.calificacionSocia
           ? <div className="tarjeta"><p className="font-bold">Tu calificación</p><Estrellas valor={p.calificacionSocia.estrellas} /></div>
-          : <FormCalificar titulo={`¿Cómo te fue con ${socia.nombre.split(" ")[0]}?`} onEnviar={(c) => calificar(p.id, "socia", c)} />)}
+          : <FormCalificar titulo={`¿Cómo te fue con ${socia.nombre.split(" ")[0]}?`} onEnviar={(c) => accion(() => calificar(p.id, "socia", c))} />)}
 
         {["buscando", "aceptado"].includes(p.estado) && (
-          <button className="btn border-2 border-red-300 bg-white text-red-600" onClick={() => cambiarEstado(p.id, "cancelado")}>Cancelar pedido</button>
+          <button className="btn border-2 border-red-300 bg-white text-red-600" onClick={() => accion(() => cancelarPedido(p.id))}>Cancelar pedido</button>
         )}
       </Pantalla>
     </>

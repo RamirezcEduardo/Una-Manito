@@ -1,7 +1,7 @@
 "use client";
 import { use } from "react";
 import { Mapa } from "@/components/MapaDinamico";
-import { Cabecera, EstadoBadge, Estrellas, FormCalificar, Pantalla } from "@/components/ui";
+import { Cabecera, EstadoBadge, Estrellas, FormCalificar, Pantalla, accion } from "@/components/ui";
 import { ETIQUETA_ESTADO, SIGUIENTE_ESTADO, soles } from "@/lib/config";
 import { useDatos } from "@/lib/store";
 
@@ -9,7 +9,7 @@ const BOTON = { aceptado: "🛵 Voy en camino", en_camino: "✨ Llegué, empezar
 
 export default function PedidoSocia({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { pedidos, clientes, cambiarEstado, confirmarPago, calificar, listo } = useDatos();
+  const { pedidos, clientes, avanzarPedido, confirmarPago, calificar, listo } = useDatos();
   const p = pedidos.find((x) => x.id === id);
   if (!listo) return null;
   if (!p) return (<><Cabecera titulo="Pedido" volver="/socia" /><Pantalla><p>Pedido no encontrado.</p></Pantalla></>);
@@ -38,19 +38,19 @@ export default function PedidoSocia({ params }: { params: Promise<{ id: string }
           <div className="flex justify-between text-xl font-extrabold text-marca"><span>Tú ganas</span><span>{soles(neto)}</span></div>
         </div>
 
-        {sig && <button className="btn-primario py-6 text-xl" onClick={() => cambiarEstado(p.id, sig)}>{BOTON[p.estado as keyof typeof BOTON] ?? ETIQUETA_ESTADO[sig].texto}</button>}
+        {sig && <button className="btn-primario py-6 text-xl" onClick={() => accion(() => avanzarPedido(p.id))}>{BOTON[p.estado as keyof typeof BOTON] ?? ETIQUETA_ESTADO[sig].texto}</button>}
 
         {p.estado === "terminado" && (
           p.pago.estado === "confirmado" ? <div className="tarjeta bg-green-50 font-bold text-green-800">✅ Pago recibido ({p.pago.metodo})</div>
           : p.pago.estado === "marcado_pagado" ? (
             <div className="tarjeta space-y-3"><p className="font-semibold">El cliente dice que pagó por <b className="capitalize">{p.pago.metodo}</b>.</p>
-              <button className="btn-acento" onClick={() => confirmarPago(p.id)}>Sí, recibí el pago</button></div>
+              <button className="btn-acento" onClick={() => accion(() => confirmarPago(p.id))}>Sí, recibí el pago</button></div>
           ) : <div className="tarjeta bg-acento-claro">⏳ Esperando que el cliente marque el pago.</div>
         )}
 
         {p.estado === "terminado" && (p.calificacionCliente
           ? <div className="tarjeta"><p className="font-bold">Calificaste al cliente</p><Estrellas valor={p.calificacionCliente.estrellas} /></div>
-          : <FormCalificar titulo="¿Cómo te fue con el cliente?" onEnviar={(c) => calificar(p.id, "cliente", c)} />)}
+          : <FormCalificar titulo="¿Cómo te fue con el cliente?" onEnviar={(c) => accion(() => calificar(p.id, "cliente", c))} />)}
       </Pantalla>
     </>
   );
