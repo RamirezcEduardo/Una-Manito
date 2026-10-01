@@ -11,10 +11,11 @@ export default function Inicio() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col px-5 py-8">
-      <div className="rounded-[2rem] bg-marca p-7 text-white shadow-lg">
-        <div className="text-5xl">🤝</div>
-        <h1 className="mt-3 text-4xl font-extrabold">Una Manito</h1>
-        <p className="mt-2 text-xl text-white/90">{ESLOGAN_CLIENTE}</p>
+      <div className="text-center">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo.png" alt="Una Manito" className="mx-auto w-64" />
+        <h1 className="sr-only">Una Manito</h1>
+        <p className="mt-3 text-xl font-semibold text-marca-oscuro">{ESLOGAN_CLIENTE}</p>
       </div>
 
       <section className="mt-6 space-y-3">

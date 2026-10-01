@@ -12,6 +12,8 @@ export function Cabecera({ titulo, volver }: { titulo: string; volver?: string }
       {volver && (
         <Link href={volver} aria-label="Volver" className="text-2xl leading-none">←</Link>
       )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/simbolo.png" alt="" className="h-8 w-8 rounded-full bg-white p-0.5" />
       <h1 className="flex-1 truncate text-xl font-extrabold">{titulo}</h1>
       <Link href="/" onClick={salir} className="rounded-full bg-white/20 px-3 py-1 text-sm font-semibold">Salir</Link>
     </header>

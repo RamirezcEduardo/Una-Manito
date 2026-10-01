@@ -1,12 +1,12 @@
 @import "tailwindcss";
 
 @theme {
-  --color-marca: #0e9aa7;
-  --color-marca-oscuro: #0a6f78;
-  --color-marca-claro: #e3f6f7;
+  --color-marca: #0b6ef0;
+  --color-marca-oscuro: #0a4fc8;
+  --color-marca-claro: #e6f0fe;
   --color-acento: #f6a01a;
   --color-acento-claro: #fff4e0;
-  --color-tinta: #1f2a33;
+  --color-tinta: #0b1f44;
   --color-suave: #5b6b76;
   --color-fondo: #fbfaf7;
 }
