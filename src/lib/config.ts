@@ -1,7 +1,7 @@
 import type { Config, EstadoPedido, Servicio } from "./tipos";
 
-export const ESLOGAN_CLIENTE = "Te damos una manito, al toque.";
-export const ESLOGAN_SOCIA = "Te damos la mano para crecer."; // TODO: confirmar texto final
+export const ESLOGAN_CLIENTE = "Te damos una manito en tu hogar, al toque.";
+export const ESLOGAN_SOCIA = "Te damos una manito para crecer.";
 
 export const SERVICIOS_INICIALES: Servicio[] = [
   { id: "limpieza", nombre: "Limpieza del hogar", icono: "🧹", activo: true, precioHora: 15, horasMin: 3, recargoMateriales: 10 },

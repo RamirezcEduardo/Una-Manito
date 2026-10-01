@@ -1,6 +1,6 @@
 # Una Manito 🤝
 
-> Te damos una manito, al toque.
+> Te damos una manito en tu hogar, al toque.
 
 App tipo Uber para servicios del hogar en Lima. **Beta: solo limpieza doméstica.** Es una PWA mobile-first en español.
 

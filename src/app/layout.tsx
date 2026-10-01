@@ -5,7 +5,7 @@ import RegistrarSW from "@/components/RegistrarSW";
 
 export const metadata: Metadata = {
   title: "Una Manito",
-  description: "Te damos una manito, al toque. Servicios del hogar en Lima.",
+  description: "Te damos una manito en tu hogar, al toque. Servicios del hogar en Lima.",
   manifest: "/manifest.webmanifest",
   icons: { icon: "/icono-192.png", apple: "/icono-192.png" },
   appleWebApp: { capable: true, title: "Una Manito", statusBarStyle: "default" },
