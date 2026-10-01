@@ -14,7 +14,7 @@ npm run dev   # http://localhost:3000
 La app tiene dos modos:
 
 - **Demostración** (sin configurar nada): los datos se guardan en el navegador y en el inicio hay accesos para entrar como cliente, socia o administrador.
-- **Real con Supabase**: copia `.env.example` como `.env.local` y completa `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+- **Real con Supabase**: copia `.env.example` como `.env.local` (ya trae los datos del proyecto).
 
 ## Configurar Supabase
 
