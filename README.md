@@ -19,7 +19,7 @@ La app tiene dos modos:
 ## Configurar Supabase
 
 1. Crea un proyecto **nuevo** en [supabase.com](https://supabase.com) (región sugerida: São Paulo, la más cercana a Lima).
-2. En **SQL Editor**, ejecuta el archivo `supabase/migrations/20261001000000_esquema_inicial.sql`.
+2. En **SQL Editor**, ejecuta en orden los archivos de `supabase/migrations/` (primero `20261001000000_esquema_inicial.sql`, luego `20261002000000_todos_los_distritos.sql`).
    Crea las tablas, las reglas de seguridad, el bucket de fotos y los datos iniciales (servicios, distritos y comisión del 15%).
 3. En **Authentication → Email**, deja activado el inicio con correo. En la plantilla *Magic Link* incluye `{{ .Token }}` para que el correo traiga el código de 6 dígitos.
 4. Copia `.env.example` como `.env.local` (ya trae la URL y la clave pública del proyecto de Una Manito).

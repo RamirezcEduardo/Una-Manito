@@ -11,12 +11,7 @@ export const SERVICIOS_INICIALES: Servicio[] = [
   { id: "piscinas", nombre: "Limpieza de piscinas", icono: "🏊", eslogan: "Te damos una manito con tu piscina, al toque.", activo: false, precioHora: 30, horasMin: 2, recargoMateriales: 15 },
 ];
 
-export const DISTRITOS_LIMA = [
-  "Miraflores", "San Isidro", "Surco", "San Borja", "Barranco", "La Molina",
-  "Jesús María", "Lince", "Magdalena", "Pueblo Libre", "San Miguel", "Surquillo", "Chorrillos", "Los Olivos",
-];
-
-// Todos los distritos de Lima Metropolitana y Callao, para reconocer el distrito de un punto del mapa.
+// Los 43 distritos de Lima Metropolitana y los 7 del Callao (también sirven para reconocer el distrito de un punto del mapa).
 export const DISTRITOS_LIMA_TODOS = [
   "Ancón", "Ate", "Barranco", "Breña", "Carabayllo", "Chaclacayo", "Chorrillos", "Cieneguilla", "Comas",
   "El Agustino", "Independencia", "Jesús María", "La Molina", "La Victoria", "Lima", "Lince", "Los Olivos",
@@ -24,12 +19,15 @@ export const DISTRITOS_LIMA_TODOS = [
   "Punta Hermosa", "Punta Negra", "Rímac", "San Bartolo", "San Borja", "San Isidro", "San Juan de Lurigancho",
   "San Juan de Miraflores", "San Luis", "San Martín de Porres", "San Miguel", "Santa Anita", "Santa María del Mar",
   "Santa Rosa", "Surco", "Surquillo", "Villa El Salvador", "Villa María del Triunfo",
-  "Callao", "Bellavista", "Carmen de la Legua", "La Perla", "La Punta", "Mi Perú", "Ventanilla",
 ];
+export const DISTRITOS_CALLAO = ["Callao", "Bellavista", "Carmen de la Legua", "La Perla", "La Punta", "Mi Perú", "Ventanilla"];
 
 export const CONFIG_INICIAL: Config = {
   comisionPct: 15,
-  distritos: DISTRITOS_LIMA.map((nombre, i) => ({ nombre, habilitado: i < 10 })),
+  distritos: [
+    ...DISTRITOS_LIMA_TODOS.map((nombre) => ({ nombre, habilitado: true })),
+    ...DISTRITOS_CALLAO.map((nombre) => ({ nombre, habilitado: false })),
+  ],
   servicios: SERVICIOS_INICIALES,
 };
 

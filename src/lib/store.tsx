@@ -22,7 +22,7 @@ const SEMILLA: Datos = {
   sesion: null,
 };
 
-const CLAVE = "una-manito-demo-v2";
+const CLAVE = "una-manito-demo-v3";
 const nuevoId = (p: string) => p + Math.random().toString(36).slice(2, 8);
 const SIGUIENTE: Partial<Record<EstadoPedido, EstadoPedido>> = { aceptado: "en_camino", en_camino: "en_curso", en_curso: "terminado" };
 

@@ -4,7 +4,7 @@ import { Suspense, useRef, useState } from "react";
 import BuscadorDireccion from "@/components/BuscadorDireccion";
 import { Mapa } from "@/components/MapaDinamico";
 import { Cabecera, Opcion, Pantalla, accion } from "@/components/ui";
-import { DISTRITOS_LIMA_TODOS, LIMA, calcularPrecio, soles } from "@/lib/config";
+import { DISTRITOS_CALLAO, DISTRITOS_LIMA_TODOS, LIMA, calcularPrecio, soles } from "@/lib/config";
 import { direccionDePunto, emparejarDistrito, type Lugar } from "@/lib/geo";
 import { useDatos } from "@/lib/store";
 import type { ServicioId } from "@/lib/tipos";
@@ -37,7 +37,7 @@ function Formulario() {
   // Pone el distrito detectado si lo atendemos; si no, avisa.
   // Si no se reconoce el distrito, se deja vacío para que la persona lo elija (nunca uno equivocado).
   const fijarDistrito = (candidatos: (string | undefined)[]) => {
-    const todos = [...new Set([...DISTRITOS_LIMA_TODOS, ...config.distritos.map((x) => x.nombre)])];
+    const todos = [...new Set([...DISTRITOS_LIMA_TODOS, ...DISTRITOS_CALLAO, ...config.distritos.map((x) => x.nombre)])];
     const detectado = emparejarDistrito(candidatos, todos);
     if (detectado && distritos.includes(detectado)) { setDistrito(detectado); setFueraDeZona(""); return; }
     setDistrito("");

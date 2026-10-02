@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Cabecera, EstadoBadge, Pantalla, accion } from "@/components/ui";
-import { ETIQUETA_ESTADO, soles } from "@/lib/config";
+import { DISTRITOS_CALLAO, ETIQUETA_ESTADO, soles } from "@/lib/config";
 import { useDatos } from "@/lib/store";
 import type { EstadoPedido } from "@/lib/tipos";
 
@@ -120,15 +120,30 @@ function Ajustes() {
         ))}
       </div>
       <div className="tarjeta space-y-2">
-        <h3 className="font-bold">Distritos habilitados</h3>
-        <div className="grid grid-cols-2 gap-2">
-          {c.distritos.map((d, i) => (
-            <label key={d.nombre} className="flex items-center gap-2">
-              <input type="checkbox" className="h-5 w-5" checked={d.habilitado} onChange={(e) => setC({ ...c, distritos: c.distritos.map((x, j) => (j === i ? { ...x, habilitado: e.target.checked } : x)) })} />
-              {d.nombre}
-            </label>
-          ))}
-        </div>
+        <h3 className="font-bold">Distritos habilitados <span className="font-normal text-suave">({c.distritos.filter((d) => d.habilitado).length} de {c.distritos.length})</span></h3>
+        {[["Lima Metropolitana", (n: string) => !DISTRITOS_CALLAO.includes(n)], ["Callao", (n: string) => DISTRITOS_CALLAO.includes(n)]].map(([titulo, es]) => {
+          const del = (n: string) => (es as (n: string) => boolean)(n);
+          const marcar = (v: boolean) => setC({ ...c, distritos: c.distritos.map((x) => (del(x.nombre) ? { ...x, habilitado: v } : x)) });
+          return (
+            <div key={titulo as string} className="space-y-2 pt-2">
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold text-marca-oscuro">{titulo as string}</h4>
+                <div className="flex gap-3 text-sm font-semibold text-marca">
+                  <button type="button" onClick={() => marcar(true)}>Todos</button>
+                  <button type="button" onClick={() => marcar(false)}>Ninguno</button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {c.distritos.map((d, i) => del(d.nombre) && (
+                  <label key={d.nombre} className="flex items-center gap-2">
+                    <input type="checkbox" className="h-5 w-5 shrink-0" checked={d.habilitado} onChange={(e) => setC({ ...c, distritos: c.distritos.map((x, j) => (j === i ? { ...x, habilitado: e.target.checked } : x)) })} />
+                    {d.nombre}
+                  </label>
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </div>
       <button className="btn-primario" onClick={() => accion(async () => { await setConfig(c); alert("Ajustes guardados"); })}>Guardar ajustes</button>
       {demo && <button className="w-full text-sm text-suave underline" onClick={reiniciar}>Reiniciar datos de demostración</button>}
