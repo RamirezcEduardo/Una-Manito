@@ -16,6 +16,17 @@ export const DISTRITOS_LIMA = [
   "Jesús María", "Lince", "Magdalena", "Pueblo Libre", "San Miguel", "Surquillo", "Chorrillos", "Los Olivos",
 ];
 
+// Todos los distritos de Lima Metropolitana y Callao, para reconocer el distrito de un punto del mapa.
+export const DISTRITOS_LIMA_TODOS = [
+  "Ancón", "Ate", "Barranco", "Breña", "Carabayllo", "Chaclacayo", "Chorrillos", "Cieneguilla", "Comas",
+  "El Agustino", "Independencia", "Jesús María", "La Molina", "La Victoria", "Lima", "Lince", "Los Olivos",
+  "Lurigancho", "Lurín", "Magdalena", "Miraflores", "Pachacámac", "Pucusana", "Pueblo Libre", "Puente Piedra",
+  "Punta Hermosa", "Punta Negra", "Rímac", "San Bartolo", "San Borja", "San Isidro", "San Juan de Lurigancho",
+  "San Juan de Miraflores", "San Luis", "San Martín de Porres", "San Miguel", "Santa Anita", "Santa María del Mar",
+  "Santa Rosa", "Surco", "Surquillo", "Villa El Salvador", "Villa María del Triunfo",
+  "Callao", "Bellavista", "Carmen de la Legua", "La Perla", "La Punta", "Mi Perú", "Ventanilla",
+];
+
 export const CONFIG_INICIAL: Config = {
   comisionPct: 15,
   distritos: DISTRITOS_LIMA.map((nombre, i) => ({ nombre, habilitado: i < 10 })),

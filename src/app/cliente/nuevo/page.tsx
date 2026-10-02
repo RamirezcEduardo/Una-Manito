@@ -4,7 +4,7 @@ import { Suspense, useRef, useState } from "react";
 import BuscadorDireccion from "@/components/BuscadorDireccion";
 import { Mapa } from "@/components/MapaDinamico";
 import { Cabecera, Opcion, Pantalla, accion } from "@/components/ui";
-import { LIMA, calcularPrecio, soles } from "@/lib/config";
+import { DISTRITOS_LIMA_TODOS, LIMA, calcularPrecio, soles } from "@/lib/config";
 import { direccionDePunto, emparejarDistrito, type Lugar } from "@/lib/geo";
 import { useDatos } from "@/lib/store";
 import type { ServicioId } from "@/lib/tipos";
@@ -22,7 +22,7 @@ function Formulario() {
   const [buscandoDir, setBuscandoDir] = useState(false);
   const [fueraDeZona, setFueraDeZona] = useState("");
   const consulta = useRef<AbortController | null>(null);
-  const [distrito, setDistrito] = useState(distritos[0] ?? "");
+  const [distrito, setDistrito] = useState("");
   const [referencia, setReferencia] = useState("");
   const [cuando, setCuando] = useState<"asap" | "programar">("asap");
   const [fecha, setFecha] = useState("");
@@ -32,15 +32,16 @@ function Formulario() {
   const [confirmar, setConfirmar] = useState(false);
 
   const total = calcularPrecio(servicio, horas, conMateriales);
-  const valido = direccion.trim().length > 4 && !fueraDeZona && (cuando === "asap" || fecha);
+  const valido = direccion.trim().length > 4 && !!distrito && !fueraDeZona && (cuando === "asap" || fecha);
 
   // Pone el distrito detectado si lo atendemos; si no, avisa.
+  // Si no se reconoce el distrito, se deja vacío para que la persona lo elija (nunca uno equivocado).
   const fijarDistrito = (candidatos: (string | undefined)[]) => {
-    const d = emparejarDistrito(candidatos, distritos);
-    if (d) { setDistrito(d); setFueraDeZona(""); return; }
-    const todos = config.distritos.map((x) => x.nombre);
-    const conocido = emparejarDistrito(candidatos, todos);
-    setFueraDeZona(conocido ? `Aún no atendemos en ${conocido}. ¡Muy pronto llegaremos!` : "");
+    const todos = [...new Set([...DISTRITOS_LIMA_TODOS, ...config.distritos.map((x) => x.nombre)])];
+    const detectado = emparejarDistrito(candidatos, todos);
+    if (detectado && distritos.includes(detectado)) { setDistrito(detectado); setFueraDeZona(""); return; }
+    setDistrito("");
+    setFueraDeZona(detectado ? `Aún no atendemos en ${detectado}. ¡Muy pronto llegaremos!` : "");
   };
 
   // Al marcar un punto en el mapa, rellena la dirección y el distrito.
@@ -65,7 +66,7 @@ function Formulario() {
     setBuscandoDir(false);
     setPos({ lat: l.lat, lng: l.lng });
     setDireccion(l.direccion || l.titulo);
-    fijarDistrito([l.distrito, l.detalle]);
+    fijarDistrito(l.candidatos);
   };
 
   const usarMiUbicacion = () =>
@@ -98,7 +99,8 @@ function Formulario() {
           <input className="campo" placeholder="Calle y número" value={direccion} onChange={(e) => setDireccion(e.target.value)} />
         </div>
         <input className="campo" placeholder="Dpto, piso o interior (opcional)" value={interior} onChange={(e) => setInterior(e.target.value)} />
-        <select className="campo" value={distrito} onChange={(e) => { setDistrito(e.target.value); setFueraDeZona(""); }}>
+        <select className={`campo ${distrito ? "" : "text-suave"}`} value={distrito} onChange={(e) => { setDistrito(e.target.value); setFueraDeZona(""); }}>
+          <option value="" disabled>Elige tu distrito</option>
           {distritos.map((d) => <option key={d}>{d}</option>)}
         </select>
         {fueraDeZona && <p className="rounded-xl bg-acento-claro p-3 font-semibold text-amber-900">{fueraDeZona}</p>}

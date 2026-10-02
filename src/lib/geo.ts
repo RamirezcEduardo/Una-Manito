@@ -7,6 +7,7 @@ export interface Lugar {
   detalle: string;     // "Miraflores, Lima"
   direccion: string;   // texto para el campo dirección
   distrito?: string;   // distrito tal como viene del mapa
+  candidatos: string[]; // textos donde puede venir el distrito
   lat: number;
   lng: number;
 }
@@ -17,18 +18,38 @@ const LIMA_CENTRO = { lat: -12.0931, lng: -77.0465 };
 
 const normalizar = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 
-/** Busca cuál de nuestros distritos aparece en los textos de la dirección. */
+// Nombres que OpenStreetMap usa distinto a como los conoce la gente.
+const ALIAS: Record<string, string> = {
+  "santiago de surco": "Surco",
+  "magdalena del mar": "Magdalena",
+  "cercado de lima": "Lima",
+  "lima cercado": "Lima",
+  "rimac": "Rímac",
+};
+
+/**
+ * Busca cuál distrito aparece en los textos de la dirección.
+ * Primero coincidencias exactas (para no confundir "San Juan de Miraflores" con "Miraflores"),
+ * luego textos que contienen el nombre, probando primero los nombres más largos.
+ */
 export function emparejarDistrito(candidatos: (string | undefined)[], distritos: string[]): string | undefined {
-  const norm = distritos.map((d) => [normalizar(d), d] as const);
-  for (const c of candidatos) {
-    if (!c) continue;
-    const n = normalizar(c);
-    const exacto = norm.find(([k]) => k === n);
-    if (exacto) return exacto[1];
-    // "Santiago de Surco" → "Surco", "Distrito de Miraflores" → "Miraflores"
-    const parcial = norm.find(([k]) => n.includes(k));
-    if (parcial) return parcial[1];
+  const textos = candidatos.filter(Boolean).map((c) => normalizar(c!).replace(/^(distrito de|distrito|provincia de)\s+/, ""));
+  const claves = distritos.map((d) => [normalizar(d), d] as const);
+  const porClave = new Map(claves);
+  for (const t of textos) {
+    const alias = ALIAS[t];
+    if (alias && distritos.includes(alias)) return alias;
+    if (t !== "lima" && porClave.has(t)) return porClave.get(t);
   }
+  const largos = [...claves].sort((x, y) => y[0].length - x[0].length);
+  for (const t of textos) {
+    for (const [k, d] of largos) {
+      if (k === "lima") continue; // "Lima" aparece en casi todas las direcciones
+      if (new RegExp(`(^|\\W)${k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\W|$)`).test(t)) return d;
+    }
+  }
+  // "Lima" (Cercado) solo si no apareció ningún otro distrito.
+  if (textos.includes("lima") && porClave.has("lima")) return porClave.get("lima");
   return undefined;
 }
 
@@ -52,7 +73,9 @@ export async function buscarLugares(texto: string, cerca = LIMA_CENTRO, senal?: 
     const calle = unir(p.street, p.housenumber);
     const titulo = p.name && p.name !== p.street ? (calle ? `${p.name}, ${calle}` : p.name) : calle || p.name || "Ubicación";
     const distrito = p.district || p.locality || p.city;
+    const candidatos = [p.district, p.locality, p.city, p.county, p.name].filter(Boolean);
     return {
+      candidatos,
       titulo,
       detalle: [distrito, p.city !== distrito ? p.city : undefined].filter(Boolean).join(", "),
       direccion: calle || p.name || "",
@@ -63,7 +86,7 @@ export async function buscarLugares(texto: string, cerca = LIMA_CENTRO, senal?: 
   });
 }
 
-export async function direccionDePunto(lat: number, lng: number, senal?: AbortSignal): Promise<Lugar & { candidatos: string[] }> {
+export async function direccionDePunto(lat: number, lng: number, senal?: AbortSignal): Promise<Lugar> {
   const url = new URL("https://nominatim.openstreetmap.org/reverse");
   url.searchParams.set("lat", String(lat));
   url.searchParams.set("lon", String(lng));
@@ -77,7 +100,9 @@ export async function direccionDePunto(lat: number, lng: number, senal?: AbortSi
   const a = j.address ?? {};
   const calle = unir(a.road || a.pedestrian || a.footway, a.house_number);
   // En Lima el distrito suele venir como city_district, suburb, city o town.
-  const candidatos = [a.city_district, a.suburb, a.city, a.town, a.municipality, a.county, a.neighbourhood].filter(Boolean);
+  // Además se revisan todas las partes del nombre completo ("…, Miraflores, Lima, Perú").
+  const partes = String(j.display_name ?? "").split(",").map((x: string) => x.trim());
+  const candidatos = [a.city_district, a.suburb, a.town, a.municipality, a.city, a.county, a.quarter, a.neighbourhood, ...partes].filter(Boolean);
   return {
     titulo: calle || j.name || "Ubicación seleccionada",
     detalle: candidatos[0] ?? "",
