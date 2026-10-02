@@ -1,9 +1,11 @@
 "use client";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useRef, useState } from "react";
+import BuscadorDireccion from "@/components/BuscadorDireccion";
 import { Mapa } from "@/components/MapaDinamico";
 import { Cabecera, Opcion, Pantalla, accion } from "@/components/ui";
 import { LIMA, calcularPrecio, soles } from "@/lib/config";
+import { direccionDePunto, emparejarDistrito, type Lugar } from "@/lib/geo";
 import { useDatos } from "@/lib/store";
 import type { ServicioId } from "@/lib/tipos";
 
@@ -16,6 +18,10 @@ function Formulario() {
 
   const [pos, setPos] = useState(LIMA);
   const [direccion, setDireccion] = useState("");
+  const [interior, setInterior] = useState("");
+  const [buscandoDir, setBuscandoDir] = useState(false);
+  const [fueraDeZona, setFueraDeZona] = useState("");
+  const consulta = useRef<AbortController | null>(null);
   const [distrito, setDistrito] = useState(distritos[0] ?? "");
   const [referencia, setReferencia] = useState("");
   const [cuando, setCuando] = useState<"asap" | "programar">("asap");
@@ -26,14 +32,52 @@ function Formulario() {
   const [confirmar, setConfirmar] = useState(false);
 
   const total = calcularPrecio(servicio, horas, conMateriales);
-  const valido = direccion.trim().length > 4 && (cuando === "asap" || fecha);
+  const valido = direccion.trim().length > 4 && !fueraDeZona && (cuando === "asap" || fecha);
+
+  // Pone el distrito detectado si lo atendemos; si no, avisa.
+  const fijarDistrito = (candidatos: (string | undefined)[]) => {
+    const d = emparejarDistrito(candidatos, distritos);
+    if (d) { setDistrito(d); setFueraDeZona(""); return; }
+    const todos = config.distritos.map((x) => x.nombre);
+    const conocido = emparejarDistrito(candidatos, todos);
+    setFueraDeZona(conocido ? `Aún no atendemos en ${conocido}. ¡Muy pronto llegaremos!` : "");
+  };
+
+  // Al marcar un punto en el mapa, rellena la dirección y el distrito.
+  const ubicar = async (lat: number, lng: number) => {
+    setPos({ lat, lng });
+    consulta.current?.abort();
+    const ctrl = new AbortController();
+    consulta.current = ctrl;
+    setBuscandoDir(true);
+    try {
+      const l = await direccionDePunto(lat, lng, ctrl.signal);
+      if (l.direccion) setDireccion(l.direccion);
+      fijarDistrito(l.candidatos);
+    } catch {
+      // Sin conexión con el servicio de mapas: la persona escribe la dirección a mano.
+    }
+    if (!ctrl.signal.aborted) setBuscandoDir(false);
+  };
+
+  const elegirLugar = (l: Lugar) => {
+    consulta.current?.abort();
+    setBuscandoDir(false);
+    setPos({ lat: l.lat, lng: l.lng });
+    setDireccion(l.direccion || l.titulo);
+    fijarDistrito([l.distrito, l.detalle]);
+  };
 
   const usarMiUbicacion = () =>
-    navigator.geolocation?.getCurrentPosition((p) => setPos({ lat: p.coords.latitude, lng: p.coords.longitude }));
+    navigator.geolocation?.getCurrentPosition(
+      (p) => ubicar(p.coords.latitude, p.coords.longitude),
+      () => alert("No pudimos obtener tu ubicación. Revisa que el navegador tenga permiso."),
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
 
   const enviar = () => accion(async () => {
     const id = await crearPedido({
-      servicio: servicio.id, ubicacion: { direccion, distrito, referencia, ...pos },
+      servicio: servicio.id, ubicacion: { direccion: [direccion.trim(), interior.trim()].filter(Boolean).join(", "), distrito, referencia, ...pos },
       fecha: cuando === "asap" ? "asap" : fecha, horas, conMateriales, notas, total,
     });
     router.push(`/cliente/pedido/${id}`);
@@ -45,13 +89,19 @@ function Formulario() {
 
       <section className="tarjeta space-y-3">
         <h3 className="text-lg font-bold">📍 ¿Dónde?</h3>
-        <Mapa lat={pos.lat} lng={pos.lng} onPick={(lat, lng) => setPos({ lat, lng })} />
-        <p className="text-sm text-suave">Toca el mapa o arrastra el pin hasta tu casa.</p>
-        <button type="button" className="font-semibold text-marca" onClick={usarMiUbicacion}>Usar mi ubicación actual</button>
-        <input className="campo" placeholder="Dirección (calle, número, dpto)" value={direccion} onChange={(e) => setDireccion(e.target.value)} />
-        <select className="campo" value={distrito} onChange={(e) => setDistrito(e.target.value)}>
+        <BuscadorDireccion cerca={pos} onElegir={elegirLugar} />
+        <button type="button" className="font-semibold text-marca" onClick={usarMiUbicacion}>📌 Usar mi ubicación actual</button>
+        <Mapa lat={pos.lat} lng={pos.lng} onPick={ubicar} />
+        <p className="text-sm text-suave">Toca el mapa o arrastra el pin para ajustar el punto exacto.</p>
+        <div>
+          <label className="etiqueta">Dirección {buscandoDir && <span className="text-sm font-normal text-suave">· buscando…</span>}</label>
+          <input className="campo" placeholder="Calle y número" value={direccion} onChange={(e) => setDireccion(e.target.value)} />
+        </div>
+        <input className="campo" placeholder="Dpto, piso o interior (opcional)" value={interior} onChange={(e) => setInterior(e.target.value)} />
+        <select className="campo" value={distrito} onChange={(e) => { setDistrito(e.target.value); setFueraDeZona(""); }}>
           {distritos.map((d) => <option key={d}>{d}</option>)}
         </select>
+        {fueraDeZona && <p className="rounded-xl bg-acento-claro p-3 font-semibold text-amber-900">{fueraDeZona}</p>}
         <input className="campo" placeholder="Referencia (opcional)" value={referencia} onChange={(e) => setReferencia(e.target.value)} />
       </section>
 
@@ -96,7 +146,7 @@ function Formulario() {
             <h3 className="text-xl font-extrabold">Confirma tu pedido</h3>
             <ul className="space-y-1 text-suave">
               <li>{servicio.icono} {servicio.nombre} · {horas} horas</li>
-              <li>📍 {direccion}, {distrito}</li>
+              <li>📍 {[direccion, interior].filter(Boolean).join(", ")}, {distrito}</li>
               <li>🕒 {cuando === "asap" ? "Lo antes posible" : new Date(fecha).toLocaleString("es-PE")}</li>
               <li>🧴 {conMateriales ? "La socia lleva materiales" : "Materiales de la casa"}</li>
             </ul>
