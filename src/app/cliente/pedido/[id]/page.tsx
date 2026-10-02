@@ -2,7 +2,7 @@
 import { use } from "react";
 import { Mapa } from "@/components/MapaDinamico";
 import { Cabecera, EstadoBadge, Estrellas, FormCalificar, Pantalla, accion } from "@/components/ui";
-import { soles } from "@/lib/config";
+import { formatoFecha, soles } from "@/lib/config";
 import { useDatos } from "@/lib/store";
 import type { EstadoPedido, MetodoPago } from "@/lib/tipos";
 
@@ -51,7 +51,7 @@ export default function DetallePedido({ params }: { params: Promise<{ id: string
         <div className="tarjeta space-y-2">
           <Mapa lat={p.ubicacion.lat} lng={p.ubicacion.lng} alto={160} />
           <p>📍 {p.ubicacion.direccion}, {p.ubicacion.distrito}</p>
-          <p>🕒 {p.fecha === "asap" ? "Lo antes posible" : new Date(p.fecha).toLocaleString("es-PE")} · {p.horas} h</p>
+          <p>🕒 {formatoFecha(p.fecha)} · {p.horas} h</p>
           <p>🧴 {p.conMateriales ? "La socia lleva materiales" : "Materiales de la casa"}</p>
           {p.notas && <p>📝 {p.notas}</p>}
           <p className="text-xl font-extrabold">Total: {soles(p.total)}</p>

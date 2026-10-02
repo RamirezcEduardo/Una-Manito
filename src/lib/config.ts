@@ -52,3 +52,7 @@ export function calcularPrecio(s: Servicio, horas: number, conMateriales: boolea
 
 export const soles = (n: number) => `S/ ${n.toFixed(2)}`;
 export const LIMA = { lat: -12.0931, lng: -77.0465 };
+
+/** "sáb 4 oct, 9:00 a. m." — o "Lo antes posible". */
+export const formatoFecha = (f: string) =>
+  f === "asap" ? "Lo antes posible" : new Date(f).toLocaleString("es-PE", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });

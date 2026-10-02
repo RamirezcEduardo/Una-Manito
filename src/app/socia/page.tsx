@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Cabecera, EstadoBadge, Pantalla, accion } from "@/components/ui";
-import { ESLOGAN_SOCIA, soles } from "@/lib/config";
+import { ESLOGAN_SOCIA, formatoFecha, soles } from "@/lib/config";
 import { useDatos } from "@/lib/store";
 
 export default function PanelSocia() {
@@ -63,7 +63,7 @@ export default function PanelSocia() {
           return (
             <div key={p.id} className="tarjeta space-y-2">
               <div className="flex justify-between"><b>{s.icono} {s.nombre}</b><b className="text-marca">{soles(p.total * (1 - p.comisionPct / 100))}</b></div>
-              <p className="text-suave">📍 {p.ubicacion.distrito} · 🕒 {p.fecha === "asap" ? "Lo antes posible" : new Date(p.fecha).toLocaleString("es-PE")}</p>
+              <p className="text-suave">📍 {p.ubicacion.distrito} · 🕒 {formatoFecha(p.fecha)}</p>
               <p className="text-suave">⏱️ {p.horas} h · 🧴 {p.conMateriales ? "Llevas tus materiales" : "Materiales del cliente"}</p>
               <button className="btn-primario" onClick={() => accion(async () => { if (await aceptarPedido(p.id)) router.push(`/socia/pedido/${p.id}`); else alert("Otra socia ya tomó este pedido."); })}>Aceptar pedido</button>
             </div>

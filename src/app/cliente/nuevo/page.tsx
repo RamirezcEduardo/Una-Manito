@@ -2,9 +2,10 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useRef, useState } from "react";
 import BuscadorDireccion from "@/components/BuscadorDireccion";
+import ElegirFecha from "@/components/ElegirFecha";
 import { Mapa } from "@/components/MapaDinamico";
 import { Cabecera, Opcion, Pantalla, accion } from "@/components/ui";
-import { DISTRITOS_CALLAO, DISTRITOS_LIMA_TODOS, LIMA, calcularPrecio, soles } from "@/lib/config";
+import { calcularPrecio, DISTRITOS_CALLAO, DISTRITOS_LIMA_TODOS, formatoFecha, LIMA, soles } from "@/lib/config";
 import { direccionDePunto, emparejarDistrito, type Lugar } from "@/lib/geo";
 import { useDatos } from "@/lib/store";
 import type { ServicioId } from "@/lib/tipos";
@@ -113,7 +114,7 @@ function Formulario() {
           <Opcion activo={cuando === "asap"} onClick={() => setCuando("asap")}>Lo antes posible</Opcion>
           <Opcion activo={cuando === "programar"} onClick={() => setCuando("programar")}>Elegir fecha</Opcion>
         </div>
-        {cuando === "programar" && <input type="datetime-local" className="campo" value={fecha} onChange={(e) => setFecha(e.target.value)} />}
+        {cuando === "programar" && <ElegirFecha valor={fecha} onChange={setFecha} />}
       </section>
 
       <section className="tarjeta space-y-3">
@@ -149,7 +150,7 @@ function Formulario() {
             <ul className="space-y-1 text-suave">
               <li>{servicio.icono} {servicio.nombre} · {horas} horas</li>
               <li>📍 {[direccion, interior].filter(Boolean).join(", ")}, {distrito}</li>
-              <li>🕒 {cuando === "asap" ? "Lo antes posible" : new Date(fecha).toLocaleString("es-PE")}</li>
+              <li>🕒 {formatoFecha(cuando === "asap" ? "asap" : fecha)}</li>
               <li>🧴 {conMateriales ? "La socia lleva materiales" : "Materiales de la casa"}</li>
             </ul>
             <div className="flex justify-between rounded-2xl bg-marca-claro p-4 text-lg"><span>Total estimado</span><b>{soles(total)}</b></div>
