@@ -3,8 +3,15 @@
 import { createContext } from "react";
 import type { Calificacion, Cliente, Config, MetodoPago, Pedido, Socia } from "./tipos";
 
-export type Rol = "cliente" | "socia" | "admin";
+export type Rol = "cliente" | "socia" | "admin" | "ceo";
 export interface Sesion { rol: Rol; id: string }
+
+/** Admin y CEO comparten el panel de administración. */
+export const esEquipo = (rol?: Rol) => rol === "admin" || rol === "ceo";
+export const rutaDeRol = (rol: Rol) => (esEquipo(rol) ? "/admin" : `/${rol}`);
+
+export interface Usuario { id: string; nombre: string; telefono: string; email?: string; rol: Rol; creadoEn?: string }
+export interface Invitacion { email: string; nombre?: string; rol: "admin" | "ceo"; creadoEn: string }
 
 export interface Datos {
   config: Config;
@@ -12,6 +19,9 @@ export interface Datos {
   socias: Socia[];
   pedidos: Pedido[];
   sesion: Sesion | null;
+  /** Todos los usuarios (solo lo ve el equipo). */
+  usuarios: Usuario[];
+  invitaciones: Invitacion[];
 }
 
 export type NuevoPedido = Omit<Pedido, "id" | "estado" | "pago" | "creadoEn" | "clienteId" | "comisionPct" | "propina" | "motivoCancelacion">;
@@ -39,6 +49,11 @@ export interface Api extends Datos {
   setDisponible: (v: boolean) => Promise<void>;
   setEstadoSocia: (id: string, estado: Socia["estado"]) => Promise<void>;
   setConfig: (c: Config) => Promise<void>;
+  /** Solo el CEO: cambiar rol (cliente, admin o CEO). */
+  setRolUsuario: (id: string, rol: "cliente" | "admin" | "ceo") => Promise<void>;
+  /** Solo el CEO: invitar por correo al equipo. Si ya tiene cuenta, cambia su rol al toque. */
+  invitarUsuario: (email: string, nombre: string, rol: "admin" | "ceo") => Promise<void>;
+  eliminarInvitacion: (email: string) => Promise<void>;
   reiniciar: () => void; // solo demo
 }
 

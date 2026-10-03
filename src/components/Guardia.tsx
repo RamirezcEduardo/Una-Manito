@@ -2,6 +2,7 @@
 // Protege las rutas según la sesión (solo con Supabase; en modo demo no hace nada).
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
+import { esEquipo, rutaDeRol } from "@/lib/api";
 import { useDatos } from "@/lib/store";
 
 export default function Guardia({ children }: { children: ReactNode }) {
@@ -16,8 +17,8 @@ export default function Guardia({ children }: { children: ReactNode }) {
   if (!demo && listo && privada) {
     if (!sesion && !sinPerfil) destino = `/entrar?rol=${seccion === "socia" ? "socia" : "cliente"}`;
     else if (sinPerfil && !esRegistro) destino = seccion === "socia" ? "/socia/registro" : "/cliente/registro";
-    else if (sesion && !esRegistro && sesion.rol !== "admin" && sesion.rol !== seccion) destino = `/${sesion.rol}`;
-    else if (sesion && esRegistro) destino = `/${sesion.rol}`;
+    else if (sesion && !esRegistro && !esEquipo(sesion.rol) && sesion.rol !== seccion) destino = rutaDeRol(sesion.rol);
+    else if (sesion && esRegistro) destino = rutaDeRol(sesion.rol);
   }
 
   useEffect(() => { if (destino) router.replace(destino); }, [destino, router]);

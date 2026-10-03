@@ -23,10 +23,11 @@ La app tiene dos modos:
    Crea las tablas, las reglas de seguridad, el bucket de fotos y los datos iniciales (servicios, distritos y comisión del 15%).
 3. En **Authentication → Emails → Templates**, pega las plantillas en español de `supabase/plantillas/` (instrucciones en `supabase/plantillas/LEEME.md`). Traen el código de 6 dígitos y el logo.
 4. Copia `.env.example` como `.env.local` (ya trae la URL y la clave pública del proyecto de Una Manito).
-5. Crea tu usuario administrador: entra a la app con tu correo, completa el registro de cliente y luego ejecuta en el SQL Editor:
+5. Crea tu usuario **CEO**: entra a la app con tu correo, regístrate como cliente y ejecuta en el SQL Editor:
    ```sql
-   update perfiles set rol = 'admin' where email = 'tu-correo@ejemplo.com';
+   update perfiles set rol = 'ceo' where email = 'tu-correo@ejemplo.com';
    ```
+   Desde ese momento, en **Administración → Usuarios** puedes invitar a tu equipo (administradores u otros CEO) y cambiar roles sin tocar SQL.
 
 ### Cómo está protegido
 

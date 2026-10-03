@@ -7,7 +7,7 @@ import { CONFIG_INICIAL } from "./config";
 import { supabase as sbOpcional } from "./supabase";
 import type { Calificacion, Pedido, ServicioId } from "./tipos";
 
-const VACIO: Datos = { config: CONFIG_INICIAL, clientes: [], socias: [], pedidos: [], sesion: null };
+const VACIO: Datos = { config: CONFIG_INICIAL, clientes: [], socias: [], pedidos: [], sesion: null, usuarios: [], invitaciones: [] };
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function aPedido(r: any, cals: any[]): Pedido {
@@ -77,12 +77,13 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const [perfiles, socias, privado, pedidos, cals] = await Promise.all([
+    const [perfiles, socias, privado, pedidos, cals, invitaciones] = await Promise.all([
       sb.from("perfiles").select("*"),
       sb.from("socias").select("*"),
       sb.from("socias_privado").select("*"),
       sb.from("pedidos").select("*").order("creado_en", { ascending: false }),
       sb.from("calificaciones").select("*"),
+      sb.from("invitaciones").select("*").order("creado_en", { ascending: false }),
     ]);
     const ps = perfiles.data ?? [];
     const yo = ps.find((p: any) => p.id === user.id);
@@ -92,6 +93,8 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       config,
       sesion: yo ? { rol: yo.rol, id: yo.id } : null,
       clientes: ps.map((p: any) => ({ id: p.id, nombre: p.nombre, telefono: p.telefono, email: p.email ?? undefined })),
+      usuarios: ps.map((p: any) => ({ id: p.id, nombre: p.nombre, telefono: p.telefono, email: p.email ?? undefined, rol: p.rol, creadoEn: p.creado_en })),
+      invitaciones: (invitaciones.data ?? []).map((i: any) => ({ email: i.email, nombre: i.nombre ?? undefined, rol: i.rol, creadoEn: i.creado_en })),
       socias: (socias.data ?? []).map((s: any) => {
         const p = ps.find((x: any) => x.id === s.id);
         return {
@@ -185,6 +188,9 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       r.forEach((x) => falla(x.error));
       await cargar();
     },
+    setRolUsuario: async (id, rol) => { await rpc("set_rol_usuario", { p_usuario: id, p_rol: rol }); },
+    invitarUsuario: async (email, nombre, rol) => { await rpc("invitar_usuario", { p_email: email, p_nombre: nombre, p_rol: rol }); },
+    eliminarInvitacion: async (email) => { await rpc("eliminar_invitacion", { p_email: email }); },
     reiniciar: () => {},
   };
 

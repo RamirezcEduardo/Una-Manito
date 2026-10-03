@@ -2,6 +2,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { Cabecera, Pantalla, mensajeError } from "@/components/ui";
+import { rutaDeRol } from "@/lib/api";
 import { useDatos } from "@/lib/store";
 
 function Formulario() {
@@ -18,7 +19,7 @@ function Formulario() {
   useEffect(() => {
     if (!listo) return;
     if (sinPerfil) router.replace(`/${rol}/registro`);
-    else if (sesion) router.replace(`/${sesion.rol}`);
+    else if (sesion) router.replace(rutaDeRol(sesion.rol));
   }, [listo, sinPerfil, sesion, rol, router]);
 
   const correr = async (f: () => Promise<void>) => {

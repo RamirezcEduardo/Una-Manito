@@ -28,7 +28,7 @@ export default function Inicio() {
   const precioDesde = Math.min(...(activos.length ? activos : config.servicios).map((s) => s.precioHora));
   const router = useRouter();
   // En modo demo se entra con usuarios de prueba; con Supabase se inicia sesión con código por correo.
-  const ir = (rol: "cliente" | "socia" | "admin", id: string | undefined, ruta: string) => {
+  const ir = (rol: "cliente" | "socia" | "ceo", id: string | undefined, ruta: string) => {
     if (!demo) return router.push(rol === "socia" ? "/entrar?rol=socia" : "/entrar");
     if (id) entrar(rol, id);
     router.push(ruta);
@@ -123,7 +123,7 @@ export default function Inicio() {
 
       <footer className="pb-8 text-center text-sm text-suave">
         <Link href="/terminos" className="underline">Términos</Link> · <Link href="/privacidad" className="underline">Privacidad</Link>
-        {demo && <><br /><button className="mt-3 underline" onClick={() => ir("admin", "admin", "/admin")}>Entrar como administrador (demo)</button></>}
+        {demo && <><br /><button className="mt-3 underline" onClick={() => ir("ceo", "u-ceo", "/admin")}>Entrar como CEO (demo)</button></>}
       </footer>
     </main>
   );
