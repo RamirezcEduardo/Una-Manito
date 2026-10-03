@@ -19,7 +19,8 @@ export function mensajeError(e: unknown) {
   if (/password should be at least|weak password/i.test(m)) return "La contraseña debe tener al menos 6 caracteres.";
   if (/user already registered/i.test(m)) return "Ese correo ya tiene cuenta. Entra con tu contraseña.";
   if (/token has expired|invalid/i.test(m)) return "El código no es correcto o ya venció. Pide uno nuevo.";
-  if (/rate limit/i.test(m)) return "Pediste muchos códigos seguidos. Espera un minuto e inténtalo otra vez.";
+  if (/email rate limit|over_email_send/i.test(m)) return "Se alcanzó el límite de correos por hora. Inténtalo en un rato o escríbenos por WhatsApp.";
+  if (/rate limit/i.test(m)) return "Demasiados intentos seguidos. Espera un minuto e inténtalo otra vez.";
   return m;
 }
 
