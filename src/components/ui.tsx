@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
-import { ETIQUETA_ESTADO } from "@/lib/config";
+import { ETIQUETA_ESTADO, nivelSocia } from "@/lib/config";
 import type { Calificacion, EstadoPedido } from "@/lib/tipos";
 import { useDatos } from "@/lib/store";
 
@@ -34,6 +34,30 @@ export function Contactar({ telefono, mensaje }: { telefono: string; mensaje: st
       </a>
     </div>
   );
+}
+
+const COLORES_AVATAR = ["#0B6EF0", "#F6A01A", "#0A9F7A", "#8B5CF6", "#E5487A"];
+
+/** Foto de perfil; si no hay foto, círculo con las iniciales. */
+export function Avatar({ foto, nombre, tam = 80 }: { foto?: string; nombre: string; tam?: number }) {
+  const iniciales = nombre.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]!.toUpperCase()).join("");
+  const color = COLORES_AVATAR[[...nombre].reduce((a, c) => a + c.charCodeAt(0), 0) % COLORES_AVATAR.length];
+  const estilo = { width: tam, height: tam };
+  if (foto) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={foto} alt={nombre} style={estilo} className="shrink-0 rounded-full object-cover ring-4 ring-marca-claro" />;
+  }
+  return (
+    <span aria-label={nombre} style={{ ...estilo, background: color, fontSize: tam * 0.38 }}
+      className="flex shrink-0 items-center justify-center rounded-full font-extrabold text-white ring-4 ring-marca-claro">
+      {iniciales}
+    </span>
+  );
+}
+
+export function NivelBadge({ socia }: { socia: { calificacion: number; serviciosHechos: number } }) {
+  const { actual } = nivelSocia(socia);
+  return <span className="inline-flex items-center gap-1 rounded-full bg-acento-claro px-2.5 py-0.5 text-sm font-bold text-amber-900">{actual.icono} {actual.nombre}</span>;
 }
 
 export function Cabecera({ titulo, volver }: { titulo: string; volver?: string }) {

@@ -30,9 +30,13 @@ function Formulario() {
   const [horas, setHoras] = useState(servicio.horasMin);
   const [conMateriales, setConMateriales] = useState(false);
   const [notas, setNotas] = useState("");
+  // Por defecto se marcan las 5 tareas más comunes de una limpieza.
+  const [tareas, setTareas] = useState<string[]>(servicio.tareas.slice(0, 5));
   const [confirmar, setConfirmar] = useState(false);
 
-  const total = calcularPrecio(servicio, horas, conMateriales);
+  const fechaPedido = cuando === "asap" ? "asap" : fecha;
+  const precio = calcularPrecio(servicio, horas, conMateriales, fechaPedido, config);
+  const total = precio.total;
   const valido = direccion.trim().length > 4 && !!distrito && !fueraDeZona && (cuando === "asap" || !errorFecha(fecha));
 
   // Pone el distrito detectado si lo atendemos; si no, avisa.
@@ -80,7 +84,7 @@ function Formulario() {
   const enviar = () => accion(async () => {
     const id = await crearPedido({
       servicio: servicio.id, ubicacion: { direccion: [direccion.trim(), interior.trim()].filter(Boolean).join(", "), distrito, referencia, ...pos },
-      fecha: cuando === "asap" ? "asap" : fecha, horas, conMateriales, notas, total,
+      fecha: fechaPedido, horas, conMateriales, notas, tareas, recargo: precio.recargo, total,
     });
     router.push(`/cliente/pedido/${id}`);
   });
@@ -111,9 +115,12 @@ function Formulario() {
       <section className="tarjeta space-y-3">
         <h3 className="text-lg font-bold">🕒 ¿Cuándo?</h3>
         <div className="grid grid-cols-2 gap-2">
-          <Opcion activo={cuando === "asap"} onClick={() => setCuando("asap")}>Lo antes posible</Opcion>
+          <Opcion activo={cuando === "asap"} onClick={() => setCuando("asap")}>
+            Lo antes posible{config.recargoUrgentePct > 0 && <span className="block text-sm font-normal text-suave">+{config.recargoUrgentePct}% por urgencia</span>}
+          </Opcion>
           <Opcion activo={cuando === "programar"} onClick={() => setCuando("programar")}>Elegir fecha</Opcion>
         </div>
+        {cuando === "programar" && config.recargoFindePct > 0 && <p className="text-sm text-suave">Sábados y domingos: +{config.recargoFindePct}%. Así tu socia gana más por trabajar el fin de semana 💪</p>}
         {cuando === "programar" && <ElegirFecha valor={fecha} onChange={setFecha} />}
       </section>
 
@@ -126,6 +133,20 @@ function Formulario() {
         </div>
         <p className="text-center text-sm text-suave">Mínimo {servicio.horasMin} horas</p>
       </section>
+
+      {servicio.tareas.length > 0 && (
+        <section className="tarjeta space-y-3">
+          <h3 className="text-lg font-bold">✅ ¿Qué necesitas?</h3>
+          <p className="text-sm text-suave">Marca lo que quieres que haga la socia. Así sabe qué priorizar en tus {horas} horas.</p>
+          <div className="grid grid-cols-2 gap-2">
+            {servicio.tareas.map((t) => (
+              <Opcion key={t} activo={tareas.includes(t)} onClick={() => setTareas(tareas.includes(t) ? tareas.filter((x) => x !== t) : [...tareas, t])}>
+                {tareas.includes(t) ? "✓ " : ""}{t}
+              </Opcion>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="tarjeta space-y-3">
         <h3 className="text-lg font-bold">🧴 Materiales de limpieza</h3>
@@ -152,9 +173,14 @@ function Formulario() {
               <li>📍 {[direccion, interior].filter(Boolean).join(", ")}, {distrito}</li>
               <li>🕒 {formatoFecha(cuando === "asap" ? "asap" : fecha)}</li>
               <li>🧴 {conMateriales ? "La socia lleva materiales" : "Materiales de la casa"}</li>
+              {tareas.length > 0 && <li>✅ {tareas.join(", ")}</li>}
             </ul>
-            <div className="flex justify-between rounded-2xl bg-marca-claro p-4 text-lg"><span>Total estimado</span><b>{soles(total)}</b></div>
-            <p className="text-sm text-suave">Pagas al final por Yape, Plin o efectivo.</p>
+            <div className="space-y-1 rounded-2xl bg-marca-claro p-4">
+              <div className="flex justify-between text-suave"><span>Servicio ({horas} h{conMateriales ? " + materiales" : ""})</span><span>{soles(precio.base)}</span></div>
+              {precio.recargo > 0 && <div className="flex justify-between gap-3 text-suave"><span>Recargo ({precio.motivos.join(", ").toLowerCase()})</span><span className="shrink-0">+ {soles(precio.recargo)}</span></div>}
+              <div className="flex justify-between text-lg"><span>Total estimado</span><b>{soles(total)}</b></div>
+            </div>
+            <p className="text-sm text-suave">Pagas al final por Yape, Plin o efectivo. Si quieres, puedes dejar una propina: va completa a tu socia.</p>
             <button className="btn-primario" onClick={enviar}>Confirmar y buscar socia</button>
           </div>
         </div>

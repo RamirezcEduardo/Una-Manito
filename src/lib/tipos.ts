@@ -11,6 +11,7 @@ export interface Servicio {
   precioHora: number; // soles
   horasMin: number;
   recargoMateriales: number; // soles fijos si la socia lleva materiales
+  tareas: string[]; // lo que el cliente puede marcar ("Cocina", "Baños"…)
 }
 
 export type EstadoPedido = "buscando" | "aceptado" | "en_camino" | "en_curso" | "terminado" | "cancelado";
@@ -35,8 +36,12 @@ export interface Pedido {
   horas: number;
   conMateriales: boolean; // true = la socia lleva materiales
   notas?: string;
+  tareas: string[];   // lo que el cliente pidió que se haga
   estado: EstadoPedido;
+  recargo: number;    // soles extra por urgencia o fin de semana (ya incluidos en total)
   total: number;
+  propina: number;    // 100% para la socia, no paga comisión
+  motivoCancelacion?: string;
   comisionPct: number;
   pago: { metodo?: MetodoPago; estado: EstadoPago };
   calificacionSocia?: Calificacion;
@@ -65,6 +70,8 @@ export interface Socia {
 
 export interface Config {
   comisionPct: number;
+  recargoUrgentePct: number; // pedidos "lo antes posible"
+  recargoFindePct: number;   // sábados y domingos
   distritos: { nombre: string; habilitado: boolean }[];
   servicios: Servicio[];
 }

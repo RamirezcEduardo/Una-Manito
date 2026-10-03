@@ -2,8 +2,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
-import { Cabecera, EstadoBadge, Pantalla, accion } from "@/components/ui";
-import { ESLOGAN_SOCIA, formatoFecha, soles } from "@/lib/config";
+import { Avatar, Cabecera, EstadoBadge, Pantalla, accion } from "@/components/ui";
+import { ESLOGAN_SOCIA, formatoFecha, gananciaSocia, nivelSocia, soles } from "@/lib/config";
 import { prepararSonido, useAvisoPedidosNuevos, usePermisoAvisos } from "@/lib/avisos";
 import { useDatos } from "@/lib/store";
 
@@ -37,7 +37,9 @@ export default function PanelSocia() {
   const mios = pedidos.filter((p) => p.sociaId === yo.id);
   const activos = mios.filter((p) => !["terminado", "cancelado"].includes(p.estado));
   const terminados = mios.filter((p) => p.estado === "terminado");
-  const ganancias = terminados.reduce((t, p) => t + p.total * (1 - p.comisionPct / 100), 0);
+  const ganancias = terminados.reduce((t, p) => t + gananciaSocia(p), 0);
+  const propinas = terminados.reduce((t, p) => t + (p.propina || 0), 0);
+  const nivel = nivelSocia(yo);
 
   return (
     <>
@@ -56,8 +58,21 @@ export default function PanelSocia() {
         )}
         {yo.disponible && <p className="text-center text-sm text-suave">🔔 Deja esta pantalla abierta: te avisaremos con sonido cuando llegue un pedido.</p>}
 
+        <div className="tarjeta flex items-center gap-4">
+          <Avatar foto={yo.foto} nombre={yo.nombre} tam={64} />
+          <div className="flex-1">
+            <p className="text-lg font-extrabold">{nivel.actual.icono} {nivel.actual.nombre}</p>
+            {nivel.siguiente ? (
+              <p className="text-sm text-suave">
+                {nivel.faltan > 0 ? `Te faltan ${nivel.faltan} servicios` : "Ya tienes los servicios"}
+                {` y ${nivel.siguiente.minCalificacion}⭐ de calificación para ser ${nivel.siguiente.nombre} ${nivel.siguiente.icono}`}
+              </p>
+            ) : <p className="text-sm text-suave">¡Eres de las mejores! Los clientes ven tu insignia.</p>}
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 gap-3">
-          <div className="tarjeta"><p className="text-sm text-suave">Mis ganancias</p><p className="text-2xl font-extrabold text-marca">{soles(ganancias)}</p></div>
+          <div className="tarjeta"><p className="text-sm text-suave">Mis ganancias</p><p className="text-2xl font-extrabold text-marca">{soles(ganancias)}</p>{propinas > 0 && <p className="text-xs text-green-700">incluye {soles(propinas)} de propinas 💚</p>}</div>
           <div className="tarjeta"><p className="text-sm text-suave">Servicios</p><p className="text-2xl font-extrabold">{terminados.length}</p></div>
         </div>
 
@@ -75,9 +90,11 @@ export default function PanelSocia() {
           const s = config.servicios.find((x) => x.id === p.servicio)!;
           return (
             <div key={p.id} className="tarjeta space-y-2">
-              <div className="flex justify-between"><b>{s.icono} {s.nombre}</b><b className="text-marca">{soles(p.total * (1 - p.comisionPct / 100))}</b></div>
+              <div className="flex justify-between"><b>{s.icono} {s.nombre}</b><b className="text-marca">{soles(gananciaSocia(p))}</b></div>
+              {p.recargo > 0 && <p className="inline-block rounded-full bg-green-100 px-2 py-0.5 text-sm font-bold text-green-800">💰 Pago extra por {p.fecha === "asap" ? "urgencia" : "fin de semana"}</p>}
               <p className="text-suave">📍 {p.ubicacion.distrito} · 🕒 {formatoFecha(p.fecha)}</p>
               <p className="text-suave">⏱️ {p.horas} h · 🧴 {p.conMateriales ? "Llevas tus materiales" : "Materiales del cliente"}</p>
+              {p.tareas.length > 0 && <p className="text-suave">✅ {p.tareas.join(", ")}</p>}
               <button className="btn-primario" onClick={() => accion(async () => { if (await aceptarPedido(p.id)) router.push(`/socia/pedido/${p.id}`); else alert("Otra socia ya tomó este pedido."); })}>Aceptar pedido</button>
             </div>
           );

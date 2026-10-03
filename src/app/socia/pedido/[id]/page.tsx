@@ -2,7 +2,7 @@
 import { use } from "react";
 import { Mapa } from "@/components/MapaDinamico";
 import { Cabecera, Contactar, EstadoBadge, Estrellas, FormCalificar, Pantalla, accion } from "@/components/ui";
-import { ETIQUETA_ESTADO, SIGUIENTE_ESTADO, soles } from "@/lib/config";
+import { comisionDe, ETIQUETA_ESTADO, gananciaSocia, SIGUIENTE_ESTADO, soles } from "@/lib/config";
 import { useDatos } from "@/lib/store";
 
 const BOTON = { aceptado: "🛵 Voy en camino", en_camino: "✨ Llegué, empezar servicio", en_curso: "✅ Terminé el servicio" } as const;
@@ -15,7 +15,7 @@ export default function PedidoSocia({ params }: { params: Promise<{ id: string }
   if (!p) return (<><Cabecera titulo="Pedido" volver="/socia" /><Pantalla><p>Pedido no encontrado.</p></Pantalla></>);
   const cliente = clientes.find((c) => c.id === p.clienteId);
   const sig = SIGUIENTE_ESTADO[p.estado];
-  const neto = p.total * (1 - p.comisionPct / 100);
+  const neto = gananciaSocia(p);
 
   return (
     <>
@@ -32,11 +32,20 @@ export default function PedidoSocia({ params }: { params: Promise<{ id: string }
           {p.ubicacion.referencia && <p className="text-suave">Ref: {p.ubicacion.referencia}</p>}
           <a className="font-semibold text-marca" target="_blank" href={`https://www.google.com/maps/dir/?api=1&destination=${p.ubicacion.lat},${p.ubicacion.lng}`}>🧭 Cómo llegar</a>
           <p>⏱️ {p.horas} h · 🧴 {p.conMateriales ? "Llevas tus materiales" : "Materiales del cliente"}</p>
+          {p.tareas.length > 0 && (
+            <div className="rounded-xl bg-marca-claro p-3">
+              <p className="font-bold">✅ El cliente pidió:</p>
+              <ul className="mt-1 grid grid-cols-2 gap-x-3">{p.tareas.map((t) => <li key={t}>• {t}</li>)}</ul>
+            </div>
+          )}
           {p.notas && <p>📝 {p.notas}</p>}
+          {p.estado === "cancelado" && <p className="rounded-xl bg-gray-100 p-3 font-semibold">✖️ El cliente canceló{p.motivoCancelacion ? `: ${p.motivoCancelacion}` : ""}</p>}
         </div>
         <div className="tarjeta space-y-1">
           <div className="flex justify-between"><span>Total del servicio</span><span>{soles(p.total)}</span></div>
-          <div className="flex justify-between text-suave"><span>Comisión Una Manito ({p.comisionPct}%)</span><span>− {soles(p.total - neto)}</span></div>
+          {p.recargo > 0 && <div className="flex justify-between text-sm text-green-700"><span>💰 Incluye pago extra por {p.fecha === "asap" ? "urgencia" : "fin de semana"}</span><span>{soles(p.recargo)}</span></div>}
+          <div className="flex justify-between text-suave"><span>Comisión Una Manito ({p.comisionPct}%)</span><span>− {soles(comisionDe(p))}</span></div>
+          {p.propina > 0 && <div className="flex justify-between font-semibold text-green-700"><span>Propina (100% tuya) 💚</span><span>+ {soles(p.propina)}</span></div>}
           <div className="flex justify-between text-xl font-extrabold text-marca"><span>Tú ganas</span><span>{soles(neto)}</span></div>
         </div>
 

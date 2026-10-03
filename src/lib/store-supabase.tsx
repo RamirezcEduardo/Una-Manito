@@ -25,8 +25,12 @@ function aPedido(r: any, cals: any[]): Pedido {
     horas: r.horas,
     conMateriales: r.con_materiales,
     notas: r.notas ?? undefined,
+    tareas: r.tareas ?? [],
     estado: r.estado,
+    recargo: Number(r.recargo ?? 0),
     total: Number(r.total),
+    propina: Number(r.propina ?? 0),
+    motivoCancelacion: r.motivo_cancelacion ?? undefined,
     comisionPct: Number(r.comision_pct),
     pago: { metodo: r.pago_metodo ?? undefined, estado: r.pago_estado },
     calificacionSocia: cal("socia"),
@@ -57,10 +61,12 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     ]);
     const config = {
       comisionPct: Number(cfg.data?.comision_pct ?? CONFIG_INICIAL.comisionPct),
+      recargoUrgentePct: Number(cfg.data?.recargo_urgente_pct ?? CONFIG_INICIAL.recargoUrgentePct),
+      recargoFindePct: Number(cfg.data?.recargo_finde_pct ?? CONFIG_INICIAL.recargoFindePct),
       distritos: (dis.data ?? []).map((x: any) => ({ nombre: x.nombre, habilitado: x.habilitado })),
       servicios: (srv.data ?? []).map((x: any) => ({
         id: x.id as ServicioId, nombre: x.nombre, icono: x.icono, eslogan: x.eslogan, activo: x.activo,
-        precioHora: Number(x.precio_hora), horasMin: x.horas_min, recargoMateriales: Number(x.recargo_materiales),
+        precioHora: Number(x.precio_hora), horasMin: x.horas_min, recargoMateriales: Number(x.recargo_materiales), tareas: x.tareas ?? [],
       })),
     };
 
@@ -156,7 +162,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
         servicio: p.servicio, direccion: p.ubicacion.direccion, distrito: p.ubicacion.distrito,
         referencia: p.ubicacion.referencia || null, lat: p.ubicacion.lat, lng: p.ubicacion.lng,
         fecha: p.fecha === "asap" ? null : new Date(p.fecha).toISOString(),
-        horas: p.horas, con_materiales: p.conMateriales, notas: p.notas || null,
+        horas: p.horas, con_materiales: p.conMateriales, notas: p.notas || null, tareas: p.tareas,
       }).select("id").single();
       falla(error);
       await cargar();
@@ -164,15 +170,15 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     },
     aceptarPedido: async (id) => Boolean(await rpc("aceptar_pedido", { p_pedido: id })),
     avanzarPedido: async (id) => { await rpc("avanzar_pedido", { p_pedido: id }); },
-    cancelarPedido: async (id) => { await rpc("cancelar_pedido", { p_pedido: id }); },
-    marcarPagado: async (id, metodo) => { await rpc("marcar_pagado", { p_pedido: id, p_metodo: metodo }); },
+    cancelarPedido: async (id, motivo) => { await rpc("cancelar_pedido", { p_pedido: id, p_motivo: motivo ?? null }); },
+    marcarPagado: async (id, metodo, propina = 0) => { await rpc("marcar_pagado", { p_pedido: id, p_metodo: metodo, p_propina: propina }); },
     confirmarPago: async (id) => { await rpc("confirmar_pago", { p_pedido: id }); },
     calificar: async (id, _quien, c) => { await rpc("calificar", { p_pedido: id, p_estrellas: c.estrellas, p_comentario: c.comentario || null }); },
     setDisponible: async (v) => { await rpc("set_disponible", { p_valor: v }); },
     setEstadoSocia: async (id, estado) => { await rpc("set_estado_socia", { p_socia: id, p_estado: estado }); },
     setConfig: async (c) => {
       const r = await Promise.all([
-        sb.from("config").update({ comision_pct: c.comisionPct }).eq("id", 1),
+        sb.from("config").update({ comision_pct: c.comisionPct, recargo_urgente_pct: c.recargoUrgentePct, recargo_finde_pct: c.recargoFindePct }).eq("id", 1),
         ...c.servicios.map((s) => sb.from("servicios").update({ activo: s.activo, precio_hora: s.precioHora }).eq("id", s.id)),
         ...c.distritos.map((x) => sb.from("distritos").update({ habilitado: x.habilitado }).eq("nombre", x.nombre)),
       ]);

@@ -14,7 +14,7 @@ export interface Datos {
   sesion: Sesion | null;
 }
 
-export type NuevoPedido = Omit<Pedido, "id" | "estado" | "pago" | "creadoEn" | "clienteId" | "comisionPct">;
+export type NuevoPedido = Omit<Pedido, "id" | "estado" | "pago" | "creadoEn" | "clienteId" | "comisionPct" | "propina" | "motivoCancelacion">;
 export type NuevaSocia = Omit<Socia, "id" | "estado" | "disponible" | "calificacion" | "serviciosHechos" | "foto"> & { foto: File | string };
 
 export interface Api extends Datos {
@@ -32,8 +32,8 @@ export interface Api extends Datos {
   crearPedido: (p: NuevoPedido) => Promise<string>;
   aceptarPedido: (pedidoId: string) => Promise<boolean>;
   avanzarPedido: (pedidoId: string) => Promise<void>;
-  cancelarPedido: (pedidoId: string) => Promise<void>;
-  marcarPagado: (pedidoId: string, metodo: MetodoPago) => Promise<void>;
+  cancelarPedido: (pedidoId: string, motivo?: string) => Promise<void>;
+  marcarPagado: (pedidoId: string, metodo: MetodoPago, propina?: number) => Promise<void>;
   confirmarPago: (pedidoId: string) => Promise<void>;
   calificar: (pedidoId: string, quien: "socia" | "cliente", c: Calificacion) => Promise<void>;
   setDisponible: (v: boolean) => Promise<void>;

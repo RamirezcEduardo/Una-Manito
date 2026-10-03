@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
-import { Cabecera, EstadoBadge, Pantalla, accion } from "@/components/ui";
-import { DISTRITOS_CALLAO, ETIQUETA_ESTADO, soles } from "@/lib/config";
+import { Avatar, Cabecera, EstadoBadge, NivelBadge, Pantalla, accion } from "@/components/ui";
+import { comisionDe, DISTRITOS_CALLAO, ETIQUETA_ESTADO, gananciaSocia, soles } from "@/lib/config";
 import { useDatos } from "@/lib/store";
 import type { EstadoPedido } from "@/lib/tipos";
 
@@ -33,12 +33,16 @@ function Resumen() {
   const { pedidos, socias } = useDatos();
   const terminados = pedidos.filter((p) => p.estado === "terminado");
   const ingresos = terminados.reduce((t, p) => t + p.total, 0);
-  const comisiones = terminados.reduce((t, p) => t + (p.total * p.comisionPct) / 100, 0);
+  const comisiones = terminados.reduce((t, p) => t + comisionDe(p), 0);
+  const pagadoSocias = terminados.reduce((t, p) => t + gananciaSocia(p), 0);
+  const propinas = terminados.reduce((t, p) => t + (p.propina || 0), 0);
   const kpis = [
     ["Servicios terminados", terminados.length],
     ["Pedidos activos", pedidos.filter((p) => !["terminado", "cancelado"].includes(p.estado)).length],
     ["Ingresos totales", soles(ingresos)],
-    ["Comisiones", soles(comisiones)],
+    ["Comisiones (lo que ganas)", soles(comisiones)],
+    ["Ganado por socias", soles(pagadoSocias)],
+    ["Propinas para socias", soles(propinas)],
     ["Socias aprobadas", socias.filter((s) => s.estado === "aprobada").length],
     ["Por aprobar", socias.filter((s) => s.estado === "pendiente").length],
   ];
@@ -59,9 +63,8 @@ function Socias() {
       {orden.map((s) => (
         <div key={s.id} className="tarjeta space-y-3">
           <div className="flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={s.foto} alt="" className="h-14 w-14 rounded-full object-cover" />
-            <div className="flex-1"><b>{s.nombre}</b><p className="text-sm text-suave">{s.dni && `DNI ${s.dni} · `}{s.telefono}</p></div>
+            <Avatar foto={s.foto} nombre={s.nombre} tam={56} />
+            <div className="flex-1"><b>{s.nombre}</b> {s.estado === "aprobada" && <NivelBadge socia={s} />}<p className="text-sm text-suave">{s.dni && `DNI ${s.dni} · `}{s.telefono}</p></div>
             <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-semibold capitalize">{s.estado}</span>
           </div>
           <p className="text-sm text-suave">📍 {s.distritos.join(", ")}</p>
@@ -107,6 +110,11 @@ function Ajustes() {
       <div className="tarjeta space-y-2">
         <label className="etiqueta">Comisión de la plataforma (%)</label>
         <input type="number" min={0} max={50} className="campo" value={c.comisionPct} onChange={(e) => setC({ ...c, comisionPct: +e.target.value })} />
+        <label className="etiqueta pt-2">Recargo “lo antes posible” (%)</label>
+        <input type="number" min={0} max={100} className="campo" value={c.recargoUrgentePct} onChange={(e) => setC({ ...c, recargoUrgentePct: +e.target.value })} />
+        <label className="etiqueta pt-2">Recargo sábados y domingos (%)</label>
+        <input type="number" min={0} max={100} className="campo" value={c.recargoFindePct} onChange={(e) => setC({ ...c, recargoFindePct: +e.target.value })} />
+        <p className="text-sm text-suave">Los recargos suben el total: la socia gana más y la comisión también.</p>
       </div>
       <div className="tarjeta space-y-3">
         <h3 className="font-bold">Servicios y precios por hora</h3>

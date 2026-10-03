@@ -13,16 +13,16 @@ const SEMILLA: Datos = {
   config: CONFIG_INICIAL,
   clientes: [{ id: "c1", nombre: "Lucía Paredes", telefono: "987654321" }],
   socias: [
-    { id: "s1", nombre: "Rosa Quispe", telefono: "912345678", dni: "45678912", foto: "https://i.pravatar.cc/200?img=47", distritos: ["Miraflores", "Surco", "Barranco"], servicios: ["limpieza"], estado: "aprobada", disponible: true, calificacion: 4.9, serviciosHechos: 132 },
-    { id: "s2", nombre: "Carmen Huamán", telefono: "923456789", dni: "41234567", foto: "https://i.pravatar.cc/200?img=45", distritos: ["San Isidro", "Lince"], servicios: ["limpieza"], estado: "pendiente", disponible: false, calificacion: 0, serviciosHechos: 0 },
+    { id: "s1", nombre: "Rosa Quispe", telefono: "912345678", dni: "45678912", foto: "", distritos: ["Miraflores", "Surco", "Barranco"], servicios: ["limpieza"], estado: "aprobada", disponible: true, calificacion: 4.9, serviciosHechos: 132 },
+    { id: "s2", nombre: "Carmen Huamán", telefono: "923456789", dni: "41234567", foto: "", distritos: ["San Isidro", "Lince"], servicios: ["limpieza"], estado: "pendiente", disponible: false, calificacion: 0, serviciosHechos: 0 },
   ],
   pedidos: [
-    { id: "p1", clienteId: "c1", sociaId: "s1", servicio: "limpieza", ubicacion: { direccion: "Av. Larco 345, dpto 502", distrito: "Miraflores", lat: -12.1211, lng: -77.0297 }, fecha: "2026-09-20T09:00:00", horas: 4, conMateriales: false, estado: "terminado", total: 60, comisionPct: 15, pago: { metodo: "yape", estado: "confirmado" }, calificacionSocia: { estrellas: 5, comentario: "¡Impecable!" }, creadoEn: "2026-09-19T18:00:00" },
+    { id: "p1", clienteId: "c1", sociaId: "s1", servicio: "limpieza", ubicacion: { direccion: "Av. Larco 345, dpto 502", distrito: "Miraflores", lat: -12.1211, lng: -77.0297 }, fecha: "2026-09-20T09:00:00", horas: 4, conMateriales: false, tareas: ["Cocina", "Baños", "Pisos"], estado: "terminado", recargo: 0, total: 60, propina: 10, comisionPct: 15, pago: { metodo: "yape", estado: "confirmado" }, calificacionSocia: { estrellas: 5, comentario: "¡Impecable!" }, creadoEn: "2026-09-19T18:00:00" },
   ],
   sesion: null,
 };
 
-const CLAVE = "una-manito-demo-v3";
+const CLAVE = "una-manito-demo-v4";
 const nuevoId = (p: string) => p + Math.random().toString(36).slice(2, 8);
 const SIGUIENTE: Partial<Record<EstadoPedido, EstadoPedido>> = { aceptado: "en_camino", en_camino: "en_curso", en_curso: "terminado" };
 
@@ -84,7 +84,7 @@ function DemoProvider({ children }: { children: ReactNode }) {
       const id = nuevoId("p");
       mod((x) => ({
         ...x,
-        pedidos: [{ ...p, id, clienteId: x.sesion!.id, estado: "buscando", pago: { estado: "pendiente" }, comisionPct: x.config.comisionPct, creadoEn: new Date().toISOString() }, ...x.pedidos],
+        pedidos: [{ ...p, id, clienteId: x.sesion!.id, estado: "buscando", pago: { estado: "pendiente" }, propina: 0, comisionPct: x.config.comisionPct, creadoEn: new Date().toISOString() }, ...x.pedidos],
       }));
       return id;
     },
@@ -95,8 +95,8 @@ function DemoProvider({ children }: { children: ReactNode }) {
       return true;
     },
     avanzarPedido: async (id) => modPedido(id, (p) => ({ ...p, estado: SIGUIENTE[p.estado] ?? p.estado })),
-    cancelarPedido: async (id) => modPedido(id, (p) => ({ ...p, estado: "cancelado" })),
-    marcarPagado: async (id, metodo) => modPedido(id, (p) => ({ ...p, pago: { metodo, estado: "marcado_pagado" } })),
+    cancelarPedido: async (id, motivo) => modPedido(id, (p) => ({ ...p, estado: "cancelado", motivoCancelacion: motivo })),
+    marcarPagado: async (id, metodo, propina = 0) => modPedido(id, (p) => ({ ...p, propina, pago: { metodo, estado: "marcado_pagado" } })),
     confirmarPago: async (id) => modPedido(id, (p) => ({ ...p, pago: { ...p.pago, estado: "confirmado" } })),
     calificar: async (id, quien, c) =>
       modPedido(id, (p) => (quien === "socia" ? { ...p, calificacionSocia: c } : { ...p, calificacionCliente: c })),
