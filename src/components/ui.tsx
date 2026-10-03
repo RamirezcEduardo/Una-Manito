@@ -14,6 +14,10 @@ export async function accion(f: () => Promise<unknown>) {
 export function mensajeError(e: unknown) {
   const m = e instanceof Error ? e.message : "";
   if (!m || /fetch|network/i.test(m)) return "No pudimos conectarnos. Revisa tu internet e inténtalo de nuevo.";
+  if (/invalid login credentials/i.test(m)) return "Correo o contraseña incorrectos.";
+  if (/email not confirmed/i.test(m)) return "Aún no confirmas tu correo. Revisa tu bandeja (y Spam) y toca el enlace que te enviamos.";
+  if (/password should be at least|weak password/i.test(m)) return "La contraseña debe tener al menos 6 caracteres.";
+  if (/user already registered/i.test(m)) return "Ese correo ya tiene cuenta. Entra con tu contraseña.";
   if (/token has expired|invalid/i.test(m)) return "El código no es correcto o ya venció. Pide uno nuevo.";
   if (/rate limit/i.test(m)) return "Pediste muchos códigos seguidos. Espera un minuto e inténtalo otra vez.";
   return m;

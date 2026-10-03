@@ -6,9 +6,9 @@ import { Cabecera, Pantalla, accion } from "@/components/ui";
 import { useDatos } from "@/lib/store";
 
 export default function RegistroCliente() {
-  const { registrarCliente, demo } = useDatos();
+  const { registrarCliente, demo, nombreGuardado } = useDatos();
   const router = useRouter();
-  const [nombre, setNombre] = useState("");
+  const [nombre, setNombre] = useState(nombreGuardado);
   const [telefono, setTelefono] = useState("");
   const [email, setEmail] = useState("");
   const [acepto, setAcepto] = useState(false);

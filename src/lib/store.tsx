@@ -125,6 +125,11 @@ function DemoProvider({ children }: { children: ReactNode }) {
     sinPerfil: false,
     entrar: (rol, id) => mod((x) => ({ ...x, sesion: { rol, id } })),
     enviarCodigo: async () => {},
+    entrarConContrasena: async () => {},
+    crearCuenta: async () => false,
+    nombreGuardado: "",
+    recuperarContrasena: async () => {},
+    cambiarContrasena: async () => {},
     verificarCodigo: async () => {},
     salir: async () => mod((x) => ({ ...x, sesion: null })),
     registrarCliente: async (c) => {

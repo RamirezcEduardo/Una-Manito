@@ -49,10 +49,12 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
   const [listo, setListo] = useState(false);
   const [sinPerfil, setSinPerfil] = useState(false);
   const uidRef = useRef<string | null>(null);
+  const [nombreGuardado, setNombreGuardado] = useState("");
 
   const cargar = useCallback(async () => {
     const { data: { user } } = await sb.auth.getUser();
     uidRef.current = user?.id ?? null;
+    setNombreGuardado((user?.user_metadata?.nombre as string | undefined) ?? "");
 
     const [srv, dis, cfg] = await Promise.all([
       sb.from("servicios").select("*").order("orden"),
@@ -134,6 +136,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     listo,
     demo: false,
     sinPerfil,
+    nombreGuardado,
     entrar: () => {},
     enviarCodigo: async (email) => {
       // Si el correo trae enlace en vez de código, el enlace vuelve a /entrar y la sesión se abre sola.
@@ -144,6 +147,27 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       const { error } = await sb.auth.verifyOtp({ email, token, type: "email" });
       falla(error);
       await cargar();
+    },
+    entrarConContrasena: async (email, contrasena) => {
+      const { error } = await sb.auth.signInWithPassword({ email, password: contrasena });
+      falla(error);
+      await cargar();
+    },
+    crearCuenta: async (email, contrasena, nombre) => {
+      const { data, error } = await sb.auth.signUp({ email, password: contrasena, options: { emailRedirectTo: `${window.location.origin}/entrar`, data: { nombre } } });
+      falla(error);
+      // Supabase responde sin error a un correo ya registrado, pero sin identidades.
+      if (data.user && data.user.identities?.length === 0) throw new Error("Ese correo ya tiene cuenta. Entra con tu contraseña o usa “¿Olvidaste tu contraseña?”.");
+      await cargar();
+      return !data.session; // sin sesión = falta confirmar el correo
+    },
+    recuperarContrasena: async (email) => {
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/entrar/nueva-contrasena` });
+      falla(error);
+    },
+    cambiarContrasena: async (contrasena) => {
+      const { error } = await sb.auth.updateUser({ password: contrasena });
+      falla(error);
     },
     salir: async () => { await sb.auth.signOut(); await cargar(); },
     registrarCliente: async (c) => { await rpc("registrar_perfil", { p_nombre: c.nombre, p_telefono: c.telefono }); },

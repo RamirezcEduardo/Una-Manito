@@ -8,9 +8,9 @@ import { useDatos } from "@/lib/store";
 import type { ServicioId } from "@/lib/tipos";
 
 export default function RegistroSocia() {
-  const { config, registrarSocia } = useDatos();
+  const { config, registrarSocia, nombreGuardado } = useDatos();
   const router = useRouter();
-  const [nombre, setNombre] = useState("");
+  const [nombre, setNombre] = useState(nombreGuardado);
   const [telefono, setTelefono] = useState("");
   const [dni, setDni] = useState("");
   const [foto, setFoto] = useState<File | null>(null);

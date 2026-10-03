@@ -36,6 +36,15 @@ export interface Api extends Datos {
   /** Envía un código de 6 dígitos al correo (inicio de sesión sin contraseña). */
   enviarCodigo: (email: string) => Promise<void>;
   verificarCodigo: (email: string, codigo: string) => Promise<void>;
+  /** Entrar con correo y contraseña. */
+  entrarConContrasena: (email: string, contrasena: string) => Promise<void>;
+  /** Crear cuenta con contraseña. Devuelve true si hay que confirmar el correo antes de entrar. */
+  crearCuenta: (email: string, contrasena: string, nombre: string) => Promise<boolean>;
+  /** Nombre y apellido que la persona escribió al crear su cuenta (para completar el registro). */
+  nombreGuardado: string;
+  /** Envía un correo para crear una contraseña nueva. */
+  recuperarContrasena: (email: string) => Promise<void>;
+  cambiarContrasena: (contrasena: string) => Promise<void>;
   salir: () => Promise<void>;
   registrarCliente: (c: Omit<Cliente, "id">) => Promise<void>;
   registrarSocia: (s: NuevaSocia) => Promise<void>;
