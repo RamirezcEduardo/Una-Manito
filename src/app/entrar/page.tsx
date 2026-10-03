@@ -42,7 +42,7 @@ function Formulario() {
         ) : (
           <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); correr(() => verificarCodigo(email.trim(), codigo)); }}>
             <h2 className="text-xl font-extrabold">Revisa tu correo 📩</h2>
-            <p className="text-suave">Escribe el código que enviamos a <b>{email}</b></p>
+            <p className="text-suave">Escribe el código que enviamos a <b>{email}</b>, o toca el enlace del correo desde este mismo celular.</p>
             <input className="campo text-center text-3xl tracking-[.5em]" inputMode="numeric" autoComplete="one-time-code" maxLength={6}
               value={codigo} onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ""))} />
             <button className="btn-primario" disabled={cargando || codigo.length < 6}>{cargando ? "Verificando…" : "Entrar"}</button>

@@ -136,7 +136,8 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     sinPerfil,
     entrar: () => {},
     enviarCodigo: async (email) => {
-      const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+      // Si el correo trae enlace en vez de código, el enlace vuelve a /entrar y la sesión se abre sola.
+      const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo: `${window.location.origin}/entrar` } });
       falla(error);
     },
     verificarCodigo: async (email, token) => {
