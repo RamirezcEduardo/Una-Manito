@@ -2,7 +2,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useRef, useState } from "react";
 import BuscadorDireccion from "@/components/BuscadorDireccion";
-import ElegirFecha from "@/components/ElegirFecha";
+import ElegirFecha, { errorFecha } from "@/components/ElegirFecha";
 import { Mapa } from "@/components/MapaDinamico";
 import { Cabecera, Opcion, Pantalla, accion } from "@/components/ui";
 import { calcularPrecio, DISTRITOS_CALLAO, DISTRITOS_LIMA_TODOS, formatoFecha, LIMA, soles } from "@/lib/config";
@@ -33,7 +33,7 @@ function Formulario() {
   const [confirmar, setConfirmar] = useState(false);
 
   const total = calcularPrecio(servicio, horas, conMateriales);
-  const valido = direccion.trim().length > 4 && !!distrito && !fueraDeZona && (cuando === "asap" || fecha);
+  const valido = direccion.trim().length > 4 && !!distrito && !fueraDeZona && (cuando === "asap" || !errorFecha(fecha));
 
   // Pone el distrito detectado si lo atendemos; si no, avisa.
   // Si no se reconoce el distrito, se deja vacío para que la persona lo elija (nunca uno equivocado).

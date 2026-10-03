@@ -27,3 +27,15 @@ body {
 @utility tarjeta { @apply rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5; }
 @utility campo { @apply w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-lg focus:border-marca focus:outline-none; }
 @utility etiqueta { @apply mb-1 block font-semibold; }
+
+/* En iPhone el campo de hora nativo se ve vacío y se desborda: se le da tamaño y alineación normales. */
+.campo-hora {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  min-height: 3.25rem;
+  text-align: left;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+.campo-hora::-webkit-date-and-time-value { text-align: left; }
