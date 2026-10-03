@@ -1,7 +1,7 @@
 "use client";
 // Contrato de la capa de datos: lo implementan el modo demo (store.tsx) y Supabase (store-supabase.tsx).
 import { createContext } from "react";
-import type { Calificacion, Cliente, Config, MetodoPago, Pedido, Socia } from "./tipos";
+import type { Calificacion, Cliente, Config, DatosPersonales, MetodoPago, Pedido, Socia, VerificacionSocia } from "./tipos";
 
 export type Rol = "cliente" | "socia" | "admin" | "ceo";
 export interface Sesion { rol: Rol; id: string }
@@ -10,7 +10,7 @@ export interface Sesion { rol: Rol; id: string }
 export const esEquipo = (rol?: Rol) => rol === "admin" || rol === "ceo";
 export const rutaDeRol = (rol: Rol) => (esEquipo(rol) ? "/admin" : `/${rol}`);
 
-export interface Usuario { id: string; nombre: string; telefono: string; email?: string; rol: Rol; creadoEn?: string }
+export interface Usuario { id: string; nombre: string; telefono: string; email?: string; rol: Rol; creadoEn?: string; personal?: DatosPersonales }
 export interface Invitacion { email: string; nombre?: string; rol: "admin" | "ceo"; creadoEn: string }
 
 export interface Datos {
@@ -25,7 +25,13 @@ export interface Datos {
 }
 
 export type NuevoPedido = Omit<Pedido, "id" | "estado" | "pago" | "creadoEn" | "clienteId" | "comisionPct" | "propina" | "motivoCancelacion">;
-export type NuevaSocia = Omit<Socia, "id" | "estado" | "disponible" | "calificacion" | "serviciosHechos" | "foto"> & { foto: File | string };
+export type NuevaSocia = Omit<Socia, "id" | "estado" | "disponible" | "calificacion" | "serviciosHechos" | "foto" | "dni" | "personal" | "verificacion"> & {
+  foto: File | string;
+  personal: DatosPersonales;
+  verificacion: Omit<VerificacionSocia, "dniFrente" | "dniReverso">;
+  dniFrente: File;
+  dniReverso: File;
+};
 
 export interface Api extends Datos {
   listo: boolean;
@@ -46,7 +52,9 @@ export interface Api extends Datos {
   recuperarContrasena: (email: string) => Promise<void>;
   cambiarContrasena: (contrasena: string) => Promise<void>;
   salir: () => Promise<void>;
-  registrarCliente: (c: Omit<Cliente, "id">) => Promise<void>;
+  registrarCliente: (c: Omit<Cliente, "id"> & { personal: DatosPersonales }) => Promise<void>;
+  /** URL temporal para ver una foto privada (DNI). Solo la persona y el equipo. */
+  verDocumento: (ruta: string) => Promise<string>;
   registrarSocia: (s: NuevaSocia) => Promise<void>;
   crearPedido: (p: NuevoPedido) => Promise<string>;
   aceptarPedido: (pedidoId: string) => Promise<boolean>;

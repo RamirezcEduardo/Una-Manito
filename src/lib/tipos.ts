@@ -53,12 +53,35 @@ export interface Calificacion { estrellas: number; comentario?: string }
 
 export interface Cliente { id: string; nombre: string; telefono: string; email?: string }
 
+/** Datos personales privados (solo la persona y el equipo los ven). */
+export interface DatosPersonales {
+  tipoDocumento: "DNI" | "CE"; // CE = carné de extranjería
+  documento: string;
+  fechaNacimiento: string; // AAAA-MM-DD
+}
+
+/** Verificación de la socia (privada). Las fotos del DNI son rutas en un bucket privado o URLs locales en la demo. */
+export interface VerificacionSocia {
+  direccion: string;
+  distritoResidencia: string;
+  emergenciaNombre: string;
+  emergenciaParentesco: string;
+  emergenciaTelefono: string;
+  cobroNumero: string; // Yape o Plin
+  experiencia: string;
+  dniFrente?: string;
+  dniReverso?: string;
+  declaraSinAntecedentes: boolean;
+}
+
 export type EstadoSocia = "pendiente" | "aprobada" | "rechazada";
 export interface Socia {
   id: string;
   nombre: string;
   telefono: string;
   dni?: string; // solo visible para la propia socia y el admin
+  personal?: DatosPersonales; // solo para la propia socia y el equipo
+  verificacion?: VerificacionSocia; // solo para la propia socia y el equipo
   foto: string;
   distritos: string[];
   servicios: ServicioId[];

@@ -20,7 +20,9 @@ const CLIENTES_DEMO = [
 ];
 const SOCIAS_DEMO: Datos["socias"] = [
   { id: "s1", nombre: "Rosa Quispe", telefono: "912345678", dni: "45678912", foto: "", distritos: ["Miraflores", "Surco", "Barranco"], servicios: ["limpieza"], estado: "aprobada", disponible: true, calificacion: 4.9, serviciosHechos: 132 },
-  { id: "s2", nombre: "Carmen Huamán", telefono: "923456789", dni: "41234567", foto: "", distritos: ["San Isidro", "Lince"], servicios: ["limpieza"], estado: "pendiente", disponible: false, calificacion: 0, serviciosHechos: 0 },
+  { id: "s2", nombre: "Carmen Huamán", telefono: "923456789", dni: "41234567", foto: "", distritos: ["San Isidro", "Lince"], servicios: ["limpieza"], estado: "pendiente", disponible: false, calificacion: 0, serviciosHechos: 0,
+    personal: { tipoDocumento: "DNI", documento: "41234567", fechaNacimiento: "1988-04-12" },
+    verificacion: { direccion: "Jr. Huáscar 456", distritoResidencia: "Jesús María", emergenciaNombre: "Pedro Huamán", emergenciaParentesco: "Hermano/a", emergenciaTelefono: "923000111", cobroNumero: "923456789", experiencia: "De 3 a 5 años", dniFrente: "/icono-512.png", dniReverso: "/icono-512.png", declaraSinAntecedentes: true } },
   { id: "s3", nombre: "Elena Mamani", telefono: "934567890", dni: "42345678", foto: "", distritos: ["San Isidro", "San Borja", "Surco"], servicios: ["limpieza"], estado: "aprobada", disponible: false, calificacion: 4.7, serviciosHechos: 24 },
   { id: "s4", nombre: "Julia Torres", telefono: "945678901", dni: "43456789", foto: "", distritos: ["Jesús María", "Lince", "Pueblo Libre"], servicios: ["limpieza"], estado: "aprobada", disponible: false, calificacion: 4.5, serviciosHechos: 8 },
 ];
@@ -78,7 +80,7 @@ const SEMILLA: Datos = {
   invitaciones: [{ email: "marketing@unamanito.pe", nombre: "Equipo de marketing", rol: "admin", creadoEn: new Date().toISOString() }],
 };
 
-const CLAVE = "una-manito-demo-v5";
+const CLAVE = "una-manito-demo-v6";
 const nuevoId = (p: string) => p + Math.random().toString(36).slice(2, 8);
 const SIGUIENTE: Partial<Record<EstadoPedido, EstadoPedido>> = { aceptado: "en_camino", en_camino: "en_curso", en_curso: "terminado" };
 
@@ -125,6 +127,7 @@ function DemoProvider({ children }: { children: ReactNode }) {
     sinPerfil: false,
     entrar: (rol, id) => mod((x) => ({ ...x, sesion: { rol, id } })),
     enviarCodigo: async () => {},
+    verDocumento: async (ruta) => ruta,
     entrarConContrasena: async () => {},
     crearCuenta: async () => false,
     nombreGuardado: "",
@@ -134,14 +137,18 @@ function DemoProvider({ children }: { children: ReactNode }) {
     salir: async () => mod((x) => ({ ...x, sesion: null })),
     registrarCliente: async (c) => {
       const id = nuevoId("c");
-      mod((x) => ({ ...x, clientes: [...x.clientes, { ...c, id }], usuarios: [...x.usuarios, { ...c, id, rol: "cliente", creadoEn: new Date().toISOString() }], sesion: { rol: "cliente", id } }));
+      const { personal, ...datos } = c;
+      mod((x) => ({ ...x, clientes: [...x.clientes, { ...datos, id }], usuarios: [...x.usuarios, { ...datos, id, rol: "cliente", personal, creadoEn: new Date().toISOString() }], sesion: { rol: "cliente", id } }));
     },
     registrarSocia: async (s) => {
       const id = nuevoId("s");
       const foto = typeof s.foto === "string" ? s.foto : URL.createObjectURL(s.foto);
+      const { personal, verificacion, dniFrente, dniReverso, ...datos } = s;
+      const extra = { personal, dni: personal.tipoDocumento === "DNI" ? personal.documento : undefined,
+        verificacion: { ...verificacion, dniFrente: URL.createObjectURL(dniFrente), dniReverso: URL.createObjectURL(dniReverso) } };
       mod((x) => ({
-        ...x, socias: [...x.socias, { ...s, foto, id, estado: "pendiente", disponible: false, calificacion: 0, serviciosHechos: 0 }],
-        usuarios: [...x.usuarios, { id, nombre: s.nombre, telefono: s.telefono, rol: "socia", creadoEn: new Date().toISOString() }], sesion: { rol: "socia", id },
+        ...x, socias: [...x.socias, { ...datos, ...extra, foto, id, estado: "pendiente", disponible: false, calificacion: 0, serviciosHechos: 0 }],
+        usuarios: [...x.usuarios, { id, nombre: s.nombre, telefono: s.telefono, rol: "socia", personal, creadoEn: new Date().toISOString() }], sesion: { rol: "socia", id },
       }));
     },
     crearPedido: async (p) => {

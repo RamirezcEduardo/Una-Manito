@@ -39,6 +39,9 @@ function aPedido(r: any, cals: any[]): Pedido {
   };
 }
 
+const aPersonal = (p: { tipoDocumento: string; documento: string; fechaNacimiento: string }) =>
+  ({ tipo_documento: p.tipoDocumento, documento: p.documento.trim().toUpperCase(), fecha_nacimiento: p.fechaNacimiento });
+
 function falla(error: { message: string } | null) {
   if (error) throw new Error(error.message);
 }
@@ -79,14 +82,19 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const [perfiles, socias, privado, pedidos, cals, invitaciones] = await Promise.all([
+    const [perfiles, socias, privado, pedidos, cals, invitaciones, personales] = await Promise.all([
       sb.from("perfiles").select("*"),
       sb.from("socias").select("*"),
       sb.from("socias_privado").select("*"),
       sb.from("pedidos").select("*").order("creado_en", { ascending: false }),
       sb.from("calificaciones").select("*"),
       sb.from("invitaciones").select("*").order("creado_en", { ascending: false }),
+      sb.from("perfiles_privado").select("*"),
     ]);
+    const personal = (id: string) => {
+      const p = (personales.data ?? []).find((x: any) => x.id === id);
+      return p ? { tipoDocumento: p.tipo_documento, documento: p.documento, fechaNacimiento: p.fecha_nacimiento } : undefined;
+    };
     const ps = perfiles.data ?? [];
     const yo = ps.find((p: any) => p.id === user.id);
     setSinPerfil(!yo);
@@ -95,13 +103,19 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       config,
       sesion: yo ? { rol: yo.rol, id: yo.id } : null,
       clientes: ps.map((p: any) => ({ id: p.id, nombre: p.nombre, telefono: p.telefono, email: p.email ?? undefined })),
-      usuarios: ps.map((p: any) => ({ id: p.id, nombre: p.nombre, telefono: p.telefono, email: p.email ?? undefined, rol: p.rol, creadoEn: p.creado_en })),
+      usuarios: ps.map((p: any) => ({ id: p.id, nombre: p.nombre, telefono: p.telefono, email: p.email ?? undefined, rol: p.rol, creadoEn: p.creado_en, personal: personal(p.id) })),
       invitaciones: (invitaciones.data ?? []).map((i: any) => ({ email: i.email, nombre: i.nombre ?? undefined, rol: i.rol, creadoEn: i.creado_en })),
       socias: (socias.data ?? []).map((s: any) => {
         const p = ps.find((x: any) => x.id === s.id);
         return {
           id: s.id, nombre: p?.nombre ?? "Socia", telefono: p?.telefono ?? "",
-          dni: (privado.data ?? []).find((x: any) => x.id === s.id)?.dni,
+          dni: (privado.data ?? []).find((x: any) => x.id === s.id)?.dni ?? undefined,
+          personal: personal(s.id),
+          verificacion: ((v: any) => v && {
+            direccion: v.direccion ?? "", distritoResidencia: v.distrito_residencia ?? "", emergenciaNombre: v.emergencia_nombre ?? "",
+            emergenciaParentesco: v.emergencia_parentesco ?? "", emergenciaTelefono: v.emergencia_telefono ?? "", cobroNumero: v.cobro_numero ?? "",
+            experiencia: v.experiencia ?? "", dniFrente: v.dni_frente ?? undefined, dniReverso: v.dni_reverso ?? undefined, declaraSinAntecedentes: !!v.declara_sin_antecedentes,
+          })((privado.data ?? []).find((x: any) => x.id === s.id)),
           foto: s.foto_url, distritos: s.distritos, servicios: s.servicios, estado: s.estado,
           disponible: s.disponible, calificacion: Number(s.calificacion), serviciosHechos: s.servicios_hechos,
         };
@@ -170,7 +184,12 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       falla(error);
     },
     salir: async () => { await sb.auth.signOut(); await cargar(); },
-    registrarCliente: async (c) => { await rpc("registrar_perfil", { p_nombre: c.nombre, p_telefono: c.telefono }); },
+    registrarCliente: async (c) => { await rpc("registrar_perfil", { p_nombre: c.nombre, p_telefono: c.telefono, p_personal: aPersonal(c.personal) }); },
+    verDocumento: async (ruta) => {
+      const { data, error } = await sb.storage.from("documentos").createSignedUrl(ruta, 300);
+      falla(error);
+      return data!.signedUrl;
+    },
     registrarSocia: async (s) => {
       let foto = typeof s.foto === "string" ? s.foto : "";
       if (typeof s.foto !== "string") {
@@ -179,9 +198,22 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
         falla(error);
         foto = sb.storage.from("fotos").getPublicUrl(ruta).data.publicUrl;
       }
+      // Fotos del DNI en el bucket privado (solo la socia y el equipo pueden verlas).
+      const subirPrivado = async (archivo: File, nombre: string) => {
+        const ruta = `${uidRef.current}/${nombre}-${Date.now()}.${archivo.name.split(".").pop() || "jpg"}`;
+        const { error } = await sb.storage.from("documentos").upload(ruta, archivo, { upsert: true });
+        falla(error);
+        return ruta;
+      };
+      const [dniFrente, dniReverso] = await Promise.all([subirPrivado(s.dniFrente, "dni-frente"), subirPrivado(s.dniReverso, "dni-reverso")]);
+      const v = s.verificacion;
       await rpc("registrar_perfil", {
-        p_nombre: s.nombre, p_telefono: s.telefono,
-        p_socia: { dni: s.dni, foto_url: foto, distritos: s.distritos, servicios: s.servicios },
+        p_nombre: s.nombre, p_telefono: s.telefono, p_personal: aPersonal(s.personal),
+        p_socia: {
+          foto_url: foto, distritos: s.distritos, servicios: s.servicios, direccion: v.direccion, distrito_residencia: v.distritoResidencia,
+          emergencia_nombre: v.emergenciaNombre, emergencia_parentesco: v.emergenciaParentesco, emergencia_telefono: v.emergenciaTelefono,
+          cobro_numero: v.cobroNumero, experiencia: v.experiencia, dni_frente: dniFrente, dni_reverso: dniReverso, declara_sin_antecedentes: v.declaraSinAntecedentes,
+        },
       });
     },
     crearPedido: async (p) => {

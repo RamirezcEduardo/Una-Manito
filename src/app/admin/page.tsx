@@ -310,7 +310,7 @@ function Usuarios() {
               {lista.map((u) => (
                 <tr key={u.id} className="border-b border-black/5 last:border-0">
                   <td className="py-2.5"><div className="flex items-center gap-3"><Avatar nombre={u.nombre} tam={36} /><div><p className="font-semibold">{u.nombre}</p><p className="text-suave">{u.email ?? "—"}</p></div></div></td>
-                  <td>{u.telefono}</td><td>{u.creadoEn ? fechaCorta(u.creadoEn) : "—"}</td><td>{selectorRol(u)}</td>
+                  <td>{u.telefono}{u.personal && <span className="block text-xs text-suave">{u.personal.tipoDocumento} {u.personal.documento}</span>}</td><td>{u.creadoEn ? fechaCorta(u.creadoEn) : "—"}</td><td>{selectorRol(u)}</td>
                 </tr>
               ))}
             </tbody>
@@ -339,10 +339,12 @@ function Socias() {
         <div key={s.id} className="tarjeta space-y-3">
           <div className="flex items-center gap-3">
             <Avatar foto={s.foto} nombre={s.nombre} tam={56} />
-            <div className="flex-1"><b>{s.nombre}</b> {s.estado === "aprobada" && <NivelBadge socia={s} />}<p className="text-sm text-suave">{s.dni && `DNI ${s.dni} · `}{s.telefono}</p></div>
+            <div className="flex-1"><b>{s.nombre}</b> {s.estado === "aprobada" && <NivelBadge socia={s} />}
+              <p className="text-sm text-suave">{s.personal ? `${s.personal.tipoDocumento} ${s.personal.documento} · ` : s.dni ? `DNI ${s.dni} · ` : ""}{s.telefono}</p></div>
             <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-semibold capitalize">{s.estado}</span>
           </div>
-          <p className="text-sm text-suave">📍 {s.distritos.join(", ")}</p>
+          <p className="text-sm text-suave">📍 Trabaja en: {s.distritos.join(", ")}</p>
+          <FichaVerificacion socia={s} abierta={s.estado === "pendiente"} />
           {s.estado === "pendiente" && (
             <div className="grid grid-cols-2 gap-2">
               <button className="btn bg-green-500 py-3 text-white" onClick={() => accion(() => setEstadoSocia(s.id, "aprobada"))}>Aprobar</button>
@@ -352,6 +354,37 @@ function Socias() {
         </div>
       ))}
     </div>
+  );
+}
+
+const edad = (f: string) => { const n = new Date(f + "T12:00:00"), h = new Date(); return h.getFullYear() - n.getFullYear() - (h < new Date(h.getFullYear(), n.getMonth(), n.getDate()) ? 1 : 0); };
+
+/** Datos privados de la socia para revisarla antes de aprobar (solo el equipo los ve). */
+function FichaVerificacion({ socia, abierta }: { socia: import("@/lib/tipos").Socia; abierta: boolean }) {
+  const { verDocumento } = useDatos();
+  const v = socia.verificacion, p = socia.personal;
+  if (!v && !p) return null;
+  const ver = (ruta?: string) => ruta && accion(async () => { window.open(await verDocumento(ruta), "_blank", "noopener"); });
+  const fila = (k: string, val?: string | number) => val ? <div className="flex justify-between gap-3 py-1"><dt className="text-suave">{k}</dt><dd className="text-right font-semibold">{val}</dd></div> : null;
+  return (
+    <details className="rounded-2xl bg-fondo p-3 text-sm" open={abierta}>
+      <summary className="cursor-pointer font-bold">🔒 Datos de verificación</summary>
+      <dl className="mt-2 divide-y divide-black/5">
+        {p && fila("Documento", `${p.tipoDocumento} ${p.documento}`)}
+        {p && fila("Nacimiento", `${new Date(p.fechaNacimiento + "T12:00:00").toLocaleDateString("es-PE")} (${edad(p.fechaNacimiento)} años)`)}
+        {v && fila("Vive en", `${v.direccion}, ${v.distritoResidencia}`)}
+        {v && fila("Emergencia", `${v.emergenciaNombre} (${v.emergenciaParentesco}) · ${v.emergenciaTelefono}`)}
+        {v && fila("Yape / Plin", v.cobroNumero)}
+        {v && fila("Experiencia", v.experiencia)}
+        {v && fila("Declaración jurada", v.declaraSinAntecedentes ? "✅ Aceptada" : "❌ No")}
+      </dl>
+      {v && (v.dniFrente || v.dniReverso) && (
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <button type="button" className="rounded-xl bg-white py-2 font-semibold text-marca ring-1 ring-black/10" onClick={() => ver(v.dniFrente)}>🪪 DNI frente</button>
+          <button type="button" className="rounded-xl bg-white py-2 font-semibold text-marca ring-1 ring-black/10" onClick={() => ver(v.dniReverso)}>🪪 DNI reverso</button>
+        </div>
+      )}
+    </details>
   );
 }
 
