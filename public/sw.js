@@ -1,5 +1,5 @@
 // Service worker mínimo: red primero, caché como respaldo sin conexión.
-const CACHE = "una-manito-v1";
+const CACHE = "una-manito-v2";
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
 self.addEventListener("fetch", (e) => {

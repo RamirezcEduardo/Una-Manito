@@ -28,7 +28,7 @@ export function Cabecera({ titulo, volver }: { titulo: string; volver?: string }
         <Link href={volver} aria-label="Volver" className="text-2xl leading-none">←</Link>
       )}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/simbolo.png" alt="" className="h-8 w-8 rounded-full bg-white p-0.5" />
+      <img src="/icono.svg" alt="" className="h-9 w-9 rounded-[10px] ring-2 ring-white/70" />
       <h1 className="flex-1 truncate text-xl font-extrabold">{titulo}</h1>
       {(sesion || sinPerfil) && <button onClick={async () => { await salir(); router.push("/"); }} className="rounded-full bg-white/20 px-3 py-1 text-sm font-semibold">Salir</button>}
     </header>

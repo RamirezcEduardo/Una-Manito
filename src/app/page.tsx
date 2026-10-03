@@ -18,8 +18,8 @@ export default function Inicio() {
     <main className="mx-auto flex min-h-dvh max-w-md flex-col px-5 py-8">
       <div className="text-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.png" alt="Una Manito" className="mx-auto w-64" />
-        <h1 className="sr-only">Una Manito</h1>
+        <img src="/icono.svg" alt="" className="mx-auto h-28 w-28 drop-shadow-lg" />
+        <h1 className="mt-4 text-5xl font-black tracking-tight">una <span className="text-marca">manito</span></h1>
         <p className="mt-3 text-xl font-semibold text-marca-oscuro">{ESLOGAN_CLIENTE}</p>
       </div>
 
