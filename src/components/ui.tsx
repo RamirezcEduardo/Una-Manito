@@ -19,6 +19,23 @@ export function mensajeError(e: unknown) {
   return m;
 }
 
+/** Botones grandes de WhatsApp y llamada. El celular es peruano de 9 dígitos. */
+export function Contactar({ telefono, mensaje }: { telefono: string; mensaje: string }) {
+  if (!telefono) return null;
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      <a href={`https://wa.me/51${telefono}?text=${encodeURIComponent(mensaje)}`} target="_blank" rel="noopener noreferrer"
+        className="flex items-center justify-center gap-2 rounded-2xl bg-[#25D366] px-3 py-3 font-bold text-white">
+        <svg aria-hidden viewBox="0 0 24 24" className="h-5 w-5 fill-current"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z"/></svg>
+        WhatsApp
+      </a>
+      <a href={`tel:${telefono}`} className="flex items-center justify-center gap-2 rounded-2xl bg-marca-claro px-3 py-3 font-bold text-marca-oscuro">
+        📞 Llamar
+      </a>
+    </div>
+  );
+}
+
 export function Cabecera({ titulo, volver }: { titulo: string; volver?: string }) {
   const { salir, sesion, sinPerfil } = useDatos();
   const router = useRouter();

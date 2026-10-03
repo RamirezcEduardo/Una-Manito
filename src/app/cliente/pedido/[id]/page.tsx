@@ -1,7 +1,7 @@
 "use client";
 import { use } from "react";
 import { Mapa } from "@/components/MapaDinamico";
-import { Cabecera, EstadoBadge, Estrellas, FormCalificar, Pantalla, accion } from "@/components/ui";
+import { Cabecera, Contactar, EstadoBadge, Estrellas, FormCalificar, Pantalla, accion } from "@/components/ui";
 import { formatoFecha, soles } from "@/lib/config";
 import { useDatos } from "@/lib/store";
 import type { EstadoPedido, MetodoPago } from "@/lib/tipos";
@@ -37,14 +37,18 @@ export default function DetallePedido({ params }: { params: Promise<{ id: string
         </div>
 
         {socia && (
-          <div className="tarjeta flex items-center gap-4">
+          <div className="tarjeta space-y-3">
+          <div className="flex items-center gap-4">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={socia.foto} alt={socia.nombre} className="h-20 w-20 rounded-full object-cover ring-4 ring-marca-claro" />
             <div className="flex-1">
               <p className="text-lg font-bold">{socia.nombre}</p>
               <p className="text-suave">⭐ {socia.calificacion.toFixed(1)} · {socia.serviciosHechos} servicios</p>
-              <a href={`tel:${socia.telefono}`} className="font-semibold text-marca">📞 Llamar</a>
             </div>
+          </div>
+          {!["terminado", "cancelado"].includes(p.estado) && (
+            <Contactar telefono={socia.telefono} mensaje={`Hola ${socia.nombre.split(" ")[0]}, te escribo por mi pedido de Una Manito en ${p.ubicacion.direccion}.`} />
+          )}
           </div>
         )}
 

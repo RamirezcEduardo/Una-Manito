@@ -1,6 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { AceptoTerminos } from "@/components/Legal";
 import { Cabecera, Opcion, Pantalla, accion } from "@/components/ui";
 import { ESLOGAN_SOCIA } from "@/lib/config";
 import { useDatos } from "@/lib/store";
@@ -17,7 +18,8 @@ export default function RegistroSocia() {
   const [distritos, setDistritos] = useState<string[]>([]);
   const [servicios, setServicios] = useState<ServicioId[]>(["limpieza"]);
   const toggle = <T,>(arr: T[], v: T) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
-  const valido = nombre.length > 2 && /^9\d{8}$/.test(telefono) && /^\d{8}$/.test(dni) && foto && distritos.length && servicios.length;
+  const [acepto, setAcepto] = useState(false);
+  const valido = acepto && nombre.length > 2 && /^9\d{8}$/.test(telefono) && /^\d{8}$/.test(dni) && foto && distritos.length && servicios.length;
 
   return (
     <>
@@ -57,6 +59,7 @@ export default function RegistroSocia() {
               ))}
             </div>
           </div>
+          <AceptoTerminos valor={acepto} onChange={setAcepto} />
           <button className="btn-acento" disabled={!valido}>Enviar solicitud</button>
         </form>
       </Pantalla>

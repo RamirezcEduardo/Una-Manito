@@ -1,14 +1,21 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useMemo } from "react";
 import { Cabecera, EstadoBadge, Pantalla, accion } from "@/components/ui";
 import { ESLOGAN_SOCIA, formatoFecha, soles } from "@/lib/config";
+import { prepararSonido, useAvisoPedidosNuevos, usePermisoAvisos } from "@/lib/avisos";
 import { useDatos } from "@/lib/store";
 
 export default function PanelSocia() {
   const { sesion, socias, pedidos, config, setDisponible, aceptarPedido, listo } = useDatos();
   const router = useRouter();
   const yo = socias.find((s) => s.id === sesion?.id);
+  const cercanos = useMemo(() => (yo ? pedidos.filter((p) => p.estado === "buscando" && yo.distritos.includes(p.ubicacion.distrito) && yo.servicios.includes(p.servicio)) : []), [pedidos, yo]);
+  const paraAviso = useMemo(() => cercanos.map((p) => ({ id: p.id, texto: `${p.ubicacion.distrito} · ${formatoFecha(p.fecha)} · ${p.horas} h` })), [cercanos]);
+  const disponible = !!yo && yo.estado === "aprobada" && yo.disponible;
+  useAvisoPedidosNuevos(paraAviso, disponible);
+  const { permiso, pedir } = usePermisoAvisos();
   if (!listo) return null;
   if (!yo) return (<><Cabecera titulo="Socia" /><Pantalla><Link href="/" className="btn-primario block text-center">Ir al inicio</Link></Pantalla></>);
 
@@ -31,17 +38,23 @@ export default function PanelSocia() {
   const activos = mios.filter((p) => !["terminado", "cancelado"].includes(p.estado));
   const terminados = mios.filter((p) => p.estado === "terminado");
   const ganancias = terminados.reduce((t, p) => t + p.total * (1 - p.comisionPct / 100), 0);
-  const cercanos = pedidos.filter((p) => p.estado === "buscando" && yo.distritos.includes(p.ubicacion.distrito) && yo.servicios.includes(p.servicio));
 
   return (
     <>
       <Cabecera titulo={`Hola, ${yo.nombre.split(" ")[0]}`} />
       <Pantalla>
         <p className="text-suave">{ESLOGAN_SOCIA}</p>
-        <button onClick={() => accion(() => setDisponible(!yo.disponible))}
+        <button onClick={() => { prepararSonido(); accion(() => setDisponible(!yo.disponible)); }}
           className={`btn py-6 text-xl ${yo.disponible ? "bg-green-500 text-white" : "bg-gray-200 text-tinta"}`}>
           {yo.disponible ? "🟢 Estoy disponible" : "⚪ No disponible — tocar para activar"}
         </button>
+        {yo.disponible && permiso === "default" && (
+          <button onClick={pedir} className="btn border-2 border-acento bg-acento-claro text-tinta">🔔 Activar avisos de pedidos nuevos</button>
+        )}
+        {yo.disponible && permiso === "denied" && (
+          <p className="rounded-xl bg-acento-claro p-3 text-sm">🔕 Los avisos están bloqueados. Actívalos en los ajustes del navegador para enterarte de pedidos nuevos.</p>
+        )}
+        {yo.disponible && <p className="text-center text-sm text-suave">🔔 Deja esta pantalla abierta: te avisaremos con sonido cuando llegue un pedido.</p>}
 
         <div className="grid grid-cols-2 gap-3">
           <div className="tarjeta"><p className="text-sm text-suave">Mis ganancias</p><p className="text-2xl font-extrabold text-marca">{soles(ganancias)}</p></div>

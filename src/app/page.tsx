@@ -36,7 +36,10 @@ export default function Inicio() {
         <button className="btn w-full bg-white text-tinta" onClick={() => ir("socia", socias[0]?.id, "/socia")}>Soy socia, entrar</button>
       </section>
 
-      {demo && <button className="mt-8 text-sm text-suave underline" onClick={() => ir("admin", "admin", "/admin")}>Entrar como administrador (demo)</button>}
+      <p className="mt-8 text-center text-sm text-suave">
+        <Link href="/terminos" className="underline">Términos</Link> · <Link href="/privacidad" className="underline">Privacidad</Link>
+      </p>
+      {demo && <button className="mt-3 text-sm text-suave underline" onClick={() => ir("admin", "admin", "/admin")}>Entrar como administrador (demo)</button>}
     </main>
   );
 }

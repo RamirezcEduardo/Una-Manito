@@ -33,13 +33,30 @@ function DemoProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(CLAVE);
-      if (raw) setD(JSON.parse(raw));
+      // La sesión es por pestaña, para poder probar cliente y socia a la vez.
+      const sesionPestana = sessionStorage.getItem(CLAVE + "-sesion");
+      if (raw) {
+        const guardado = JSON.parse(raw) as Datos;
+        setD(sesionPestana ? { ...guardado, sesion: JSON.parse(sesionPestana) } : guardado);
+      }
     } catch {}
     setListo(true);
   }, []);
   useEffect(() => {
-    if (listo) try { localStorage.setItem(CLAVE, JSON.stringify(d)); } catch {}
+    if (listo) try {
+      localStorage.setItem(CLAVE, JSON.stringify(d));
+      sessionStorage.setItem(CLAVE + "-sesion", JSON.stringify(d.sesion));
+    } catch {}
   }, [d, listo]);
+  // Si se abre la demo en dos pestañas (cliente y socia), los cambios se ven en ambas.
+  useEffect(() => {
+    const alCambiar = (e: StorageEvent) => {
+      if (e.key !== CLAVE || !e.newValue) return;
+      try { const otro = JSON.parse(e.newValue) as Datos; setD((x) => ({ ...otro, sesion: x.sesion })); } catch {}
+    };
+    window.addEventListener("storage", alCambiar);
+    return () => window.removeEventListener("storage", alCambiar);
+  }, []);
 
   const mod = useCallback((f: (d: Datos) => Datos) => setD((x) => f(x)), []);
   const modPedido = (id: string, f: (p: Pedido) => Pedido) =>

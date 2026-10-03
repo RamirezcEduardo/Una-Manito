@@ -1,7 +1,7 @@
 "use client";
 import { use } from "react";
 import { Mapa } from "@/components/MapaDinamico";
-import { Cabecera, EstadoBadge, Estrellas, FormCalificar, Pantalla, accion } from "@/components/ui";
+import { Cabecera, Contactar, EstadoBadge, Estrellas, FormCalificar, Pantalla, accion } from "@/components/ui";
 import { ETIQUETA_ESTADO, SIGUIENTE_ESTADO, soles } from "@/lib/config";
 import { useDatos } from "@/lib/store";
 
@@ -24,7 +24,9 @@ export default function PedidoSocia({ params }: { params: Promise<{ id: string }
         <div className="tarjeta flex items-center justify-between"><b>Estado</b><EstadoBadge estado={p.estado} /></div>
         <div className="tarjeta space-y-2">
           <p className="text-lg font-bold">👤 {cliente?.nombre}</p>
-          {cliente && <a href={`tel:${cliente.telefono}`} className="font-semibold text-marca">📞 Llamar al cliente</a>}
+          {cliente && !["terminado", "cancelado"].includes(p.estado) && (
+            <Contactar telefono={cliente.telefono} mensaje={`Hola ${cliente.nombre.split(" ")[0]}, soy tu socia de Una Manito para el servicio en ${p.ubicacion.direccion}.`} />
+          )}
           <Mapa lat={p.ubicacion.lat} lng={p.ubicacion.lng} alto={180} />
           <p>📍 {p.ubicacion.direccion}, {p.ubicacion.distrito}</p>
           {p.ubicacion.referencia && <p className="text-suave">Ref: {p.ubicacion.referencia}</p>}

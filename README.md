@@ -19,9 +19,9 @@ La app tiene dos modos:
 ## Configurar Supabase
 
 1. Crea un proyecto **nuevo** en [supabase.com](https://supabase.com) (región sugerida: São Paulo, la más cercana a Lima).
-2. En **SQL Editor**, ejecuta en orden los archivos de `supabase/migrations/` (primero `20261001000000_esquema_inicial.sql`, luego `20261002000000_todos_los_distritos.sql`).
+2. En **SQL Editor**, ejecuta **en orden** todos los archivos de `supabase/migrations/` (por la fecha del nombre).
    Crea las tablas, las reglas de seguridad, el bucket de fotos y los datos iniciales (servicios, distritos y comisión del 15%).
-3. En **Authentication → Email**, deja activado el inicio con correo. En la plantilla *Magic Link* incluye `{{ .Token }}` para que el correo traiga el código de 6 dígitos.
+3. En **Authentication → Emails → Templates**, pega las plantillas en español de `supabase/plantillas/` (instrucciones en `supabase/plantillas/LEEME.md`). Traen el código de 6 dígitos y el logo.
 4. Copia `.env.example` como `.env.local` (ya trae la URL y la clave pública del proyecto de Una Manito).
 5. Crea tu usuario administrador: entra a la app con tu correo, completa el registro de cliente y luego ejecuta en el SQL Editor:
    ```sql
@@ -41,6 +41,7 @@ La app tiene dos modos:
 | Rol | Ruta | Qué hace |
 |---|---|---|
 | Todos | `/` | Bienvenida y elección de rol |
+| Todos | `/terminos`, `/privacidad` | Términos y condiciones y política de privacidad (Ley 29733) |
 | Todos | `/entrar` | Inicio de sesión con código por correo (sin contraseña) |
 | Cliente | `/cliente/registro` | Registro (nombre, celular, correo) |
 | Cliente | `/cliente` | Inicio y servicios (los que no están activos aparecen como “Muy pronto”) |
