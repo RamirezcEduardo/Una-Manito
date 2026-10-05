@@ -5,10 +5,10 @@ import BuscadorDireccion from "@/components/BuscadorDireccion";
 import ElegirFecha, { errorFecha } from "@/components/ElegirFecha";
 import { Mapa } from "@/components/MapaDinamico";
 import { Cabecera, Opcion, Pantalla, accion } from "@/components/ui";
-import { calcularPrecio, DISTRITOS_CALLAO, DISTRITOS_LIMA_TODOS, formatoFecha, LIMA, soles } from "@/lib/config";
+import { calcularPrecio, DISTRITOS_CALLAO, DISTRITOS_LIMA_TODOS, FRECUENCIAS, formatoFecha, LIMA, soles } from "@/lib/config";
 import { direccionDePunto, emparejarDistrito, type Lugar } from "@/lib/geo";
 import { useDatos } from "@/lib/store";
-import type { ServicioId } from "@/lib/tipos";
+import type { Frecuencia, ServicioId } from "@/lib/tipos";
 
 function Formulario() {
   const { config, crearPedido } = useDatos();
@@ -33,9 +33,13 @@ function Formulario() {
   // Por defecto se marcan las 5 tareas más comunes de una limpieza.
   const [tareas, setTareas] = useState<string[]>(servicio.tareas.slice(0, 5));
   const [confirmar, setConfirmar] = useState(false);
+  const [frecuenciaElegida, setFrecuencia] = useState<Frecuencia>("unica");
 
   const fechaPedido = cuando === "asap" ? "asap" : fecha;
-  const precio = calcularPrecio(servicio, horas, conMateriales, fechaPedido, config);
+  // Un plan necesita fecha y hora fijas.
+  const frecuencia: Frecuencia = cuando === "asap" ? "unica" : frecuenciaElegida;
+  const plan = FRECUENCIAS.find((f) => f.id === frecuencia)!;
+  const precio = calcularPrecio(servicio, horas, conMateriales, fechaPedido, config, frecuencia);
   const total = precio.total;
   const valido = direccion.trim().length > 4 && !!distrito && !fueraDeZona && (cuando === "asap" || !errorFecha(fecha));
 
@@ -84,7 +88,7 @@ function Formulario() {
   const enviar = () => accion(async () => {
     const id = await crearPedido({
       servicio: servicio.id, ubicacion: { direccion: [direccion.trim(), interior.trim()].filter(Boolean).join(", "), distrito, referencia, ...pos },
-      fecha: fechaPedido, horas, conMateriales, notas, tareas, recargo: precio.recargo, total,
+      fecha: fechaPedido, horas, conMateriales, notas, tareas, recargo: precio.recargo, descuento: precio.descuento, frecuencia, total,
     });
     router.push(`/cliente/pedido/${id}`);
   });
@@ -124,6 +128,24 @@ function Formulario() {
         {cuando === "programar" && <ElegirFecha valor={fecha} onChange={setFecha} />}
       </section>
 
+      {cuando === "programar" && (
+        <section className="tarjeta space-y-3">
+          <h3 className="text-lg font-bold">🔁 ¿Cada cuánto?</h3>
+          <div className="grid grid-cols-3 gap-2">
+            {FRECUENCIAS.map((f) => (
+              <Opcion key={f.id} activo={frecuenciaElegida === f.id} onClick={() => setFrecuencia(f.id)}>
+                {f.texto}{f.id !== "unica" && config.descuentoPlanPct > 0 && <span className="block text-sm font-normal text-green-700">−{config.descuentoPlanPct}%</span>}
+              </Opcion>
+            ))}
+          </div>
+          {frecuencia !== "unica" && (
+            <p className="rounded-xl bg-green-50 p-3 text-sm text-green-900">
+              💚 Con tu plan, la misma socia vuelve {plan.texto.toLowerCase()} el mismo día y a la misma hora. Puedes detenerlo cuando quieras.
+            </p>
+          )}
+        </section>
+      )}
+
       <section className="tarjeta space-y-3">
         <h3 className="text-lg font-bold">⏱️ ¿Cuántas horas?</h3>
         <div className="flex items-center justify-between">
@@ -159,7 +181,7 @@ function Formulario() {
 
       <div className="fixed inset-x-0 bottom-0 z-[1000] border-t bg-white p-4">
         <div className="mx-auto flex max-w-md items-center gap-3">
-          <div className="flex-1"><p className="text-sm text-suave">Precio estimado</p><p className="text-2xl font-extrabold">{soles(total)}</p></div>
+          <div className="flex-1"><p className="text-sm text-suave">Precio estimado</p><p className="text-2xl font-extrabold">{soles(precio.aPagar)}</p></div>
           <button className="btn-primario !w-auto" disabled={!valido} onClick={() => setConfirmar(true)}>Revisar</button>
         </div>
       </div>
@@ -171,14 +193,16 @@ function Formulario() {
             <ul className="space-y-1 text-suave">
               <li>{servicio.icono} {servicio.nombre} · {horas} horas</li>
               <li>📍 {[direccion, interior].filter(Boolean).join(", ")}, {distrito}</li>
-              <li>🕒 {formatoFecha(cuando === "asap" ? "asap" : fecha)}</li>
+              <li>🕒 {formatoFecha(cuando === "asap" ? "asap" : fecha)}{frecuencia !== "unica" && ` · 🔁 ${plan.texto.toLowerCase()}`}</li>
               <li>🧴 {conMateriales ? "La socia lleva materiales" : "Materiales de la casa"}</li>
               {tareas.length > 0 && <li>✅ {tareas.join(", ")}</li>}
             </ul>
             <div className="space-y-1 rounded-2xl bg-marca-claro p-4">
               <div className="flex justify-between text-suave"><span>Servicio ({horas} h{conMateriales ? " + materiales" : ""})</span><span>{soles(precio.base)}</span></div>
               {precio.recargo > 0 && <div className="flex justify-between gap-3 text-suave"><span>Recargo ({precio.motivos.join(", ").toLowerCase()})</span><span className="shrink-0">+ {soles(precio.recargo)}</span></div>}
-              <div className="flex justify-between text-lg"><span>Total estimado</span><b>{soles(total)}</b></div>
+              {precio.descuento > 0 && <div className="flex justify-between text-green-700"><span>Descuento por plan (−{config.descuentoPlanPct}%)</span><span>− {soles(precio.descuento)}</span></div>}
+              {precio.cargoServicio > 0 && <div className="flex justify-between text-suave"><span>Cargo de servicio</span><span>+ {soles(precio.cargoServicio)}</span></div>}
+              <div className="flex justify-between text-lg"><span>Total estimado</span><b>{soles(precio.aPagar)}</b></div>
             </div>
             <p className="text-sm text-suave">Pagas al final por Yape, Plin o efectivo. Si quieres, puedes dejar una propina: va completa a tu socia.</p>
             <button className="btn-primario" onClick={enviar}>Confirmar y buscar socia</button>

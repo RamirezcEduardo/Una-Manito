@@ -2,7 +2,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CampoFoto, CamposPersonales, errorPersonal, PERSONAL_VACIO } from "@/components/DatosPersonales";
-import { AceptoTerminos } from "@/components/Legal";
+import { AceptoTerminos, AutorizoDatos } from "@/components/Legal";
 import { Cabecera, Opcion, Pantalla, accion } from "@/components/ui";
 import { DISTRITOS_CALLAO, DISTRITOS_LIMA_TODOS, ESLOGAN_SOCIA } from "@/lib/config";
 import { useDatos } from "@/lib/store";
@@ -32,6 +32,7 @@ export default function RegistroSocia() {
   const [servicios, setServicios] = useState<ServicioId[]>(["limpieza"]);
   const [declara, setDeclara] = useState(false);
   const [acepto, setAcepto] = useState(false);
+  const [autorizo, setAutorizo] = useState(false);
   const toggle = <T,>(arr: T[], v: T) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
   const celular = /^9\d{8}$/;
   const cobro = mismoCelular ? telefono : cobroNumero;
@@ -52,6 +53,7 @@ export default function RegistroSocia() {
     !servicios.length && "servicios",
     !declara && "declaración jurada",
     !acepto && "aceptar términos",
+    !autorizo && "autorizar el uso de tus datos",
   ].filter(Boolean) as string[];
 
   const enviar = () => accion(async () => {
@@ -136,6 +138,7 @@ export default function RegistroSocia() {
             <span><b>Declaración jurada:</b> declaro que no tengo antecedentes policiales, penales ni judiciales, y autorizo a Una Manito a verificarlo. Mis datos son verdaderos.</span>
           </label>
           <AceptoTerminos valor={acepto} onChange={setAcepto} />
+          <AutorizoDatos valor={autorizo} onChange={setAutorizo} socia />
 
           {faltan.length > 0 && <p className="rounded-xl bg-acento-claro p-3 text-sm"><b>Te falta:</b> {faltan.join(", ")}.</p>}
           <button className="btn-acento" disabled={faltan.length > 0}>Enviar solicitud</button>

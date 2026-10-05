@@ -4,16 +4,18 @@ import { useMemo, useState, type ReactNode } from "react";
 import { BarrasH, GraficoArea } from "@/components/Graficos";
 import { Avatar, Cabecera, EstadoBadge, NivelBadge, accion } from "@/components/ui";
 import type { Rol } from "@/lib/api";
-import { comisionDe, DISTRITOS_CALLAO, ETIQUETA_ESTADO, gananciaSocia, soles } from "@/lib/config";
+import { comisionDe, DISTRITOS_CALLAO, ETIQUETA_ESTADO, formatoFecha, gananciaSocia, parteUnaManito, soles } from "@/lib/config";
 import { useDatos } from "@/lib/store";
 import type { EstadoPedido, Pedido } from "@/lib/tipos";
 
-type Seccion = "resumen" | "pedidos" | "socias" | "usuarios" | "ajustes";
+type Seccion = "resumen" | "pedidos" | "socias" | "cobros" | "reclamos" | "usuarios" | "ajustes";
 
 const SECCIONES: { id: Seccion; texto: string; icono: string }[] = [
   { id: "resumen", texto: "Resumen", icono: "📊" },
   { id: "pedidos", texto: "Pedidos", icono: "🧾" },
   { id: "socias", texto: "Socias", icono: "🧹" },
+  { id: "cobros", texto: "Cobros a socias", icono: "💰" },
+  { id: "reclamos", texto: "Reclamaciones", icono: "📕" },
   { id: "usuarios", texto: "Usuarios", icono: "👥" },
   { id: "ajustes", texto: "Ajustes", icono: "⚙️" },
 ];
@@ -81,6 +83,8 @@ export default function Admin() {
           {seccion === "resumen" && <Resumen irA={setSeccion} />}
           {seccion === "pedidos" && <Pedidos />}
           {seccion === "socias" && <Socias />}
+          {seccion === "cobros" && <Cobros />}
+          {seccion === "reclamos" && <Reclamos />}
           {seccion === "usuarios" && <Usuarios />}
           {seccion === "ajustes" && <Ajustes />}
         </main>
@@ -115,7 +119,7 @@ function Resumen({ irA }: { irA: (s: Seccion) => void }) {
   const enPeriodo = pedidos.filter((p) => new Date(p.creadoEn) >= desde);
   const terminados = enPeriodo.filter((p) => p.estado === "terminado");
   const ventas = terminados.reduce((t, p) => t + p.total, 0);
-  const comisiones = terminados.reduce((t, p) => t + comisionDe(p), 0);
+  const comisiones = terminados.reduce((t, p) => t + comisionDe(p) + (p.cargoServicio || 0), 0);
   const paraSocias = terminados.reduce((t, p) => t + gananciaSocia(p), 0);
   const cancelados = enPeriodo.filter((p) => p.estado === "cancelado").length;
 
@@ -402,6 +406,14 @@ function Ajustes() {
         <label className="etiqueta pt-2">Recargo sábados y domingos (%)</label>
         <input type="number" min={0} max={100} className="campo" value={c.recargoFindePct} onChange={(e) => setC({ ...c, recargoFindePct: +e.target.value })} />
         <p className="text-sm text-suave">Los recargos suben el total: la socia gana más y la comisión también.</p>
+        <label className="etiqueta pt-2">Cargo de servicio al cliente (S/ por pedido)</label>
+        <input type="number" min={0} max={50} step={0.5} className="campo" value={c.cargoServicio} onChange={(e) => setC({ ...c, cargoServicio: +e.target.value })} />
+        <p className="text-sm text-suave">Lo paga el cliente aparte y es 100% de Una Manito. No reduce lo que gana la socia.</p>
+        <label className="etiqueta pt-2">Descuento para planes semanales o quincenales (%)</label>
+        <input type="number" min={0} max={50} className="campo" value={c.descuentoPlanPct} onChange={(e) => setC({ ...c, descuentoPlanPct: +e.target.value })} />
+        <label className="etiqueta pt-2">WhatsApp de atención (9 dígitos)</label>
+        <input className="campo" inputMode="numeric" placeholder="9XXXXXXXX" value={c.whatsappSoporte} onChange={(e) => setC({ ...c, whatsappSoporte: e.target.value.replace(/\D/g, "").slice(0, 9) })} />
+        <p className="text-sm text-suave">Activa el botón verde de ayuda y el aviso de emergencia. Déjalo vacío para ocultarlo.</p>
       </div>
       <div className="tarjeta space-y-3">
         <h3 className="font-bold">Servicios y precios por hora</h3>
@@ -445,6 +457,97 @@ function Ajustes() {
         <button className="btn-primario" onClick={() => accion(async () => { await setConfig(c); alert("Ajustes guardados"); })}>Guardar ajustes</button>
         {demo && <button className="w-full text-sm text-suave underline" onClick={reiniciar}>Reiniciar datos de demostración</button>}
       </div>
+    </div>
+  );
+}
+
+/** Lo que cada socia debe pasar a Una Manito (comisión + cargo) de los servicios ya pagados por el cliente. */
+function Cobros() {
+  const { pedidos, socias, marcarLiquidado } = useDatos();
+  const pendientes = pedidos.filter((p) => p.estado === "terminado" && p.pago.estado !== "pendiente" && !p.liquidado && p.sociaId);
+  const porSocia = socias
+    .map((s) => { const ps = pendientes.filter((p) => p.sociaId === s.id); return { s, ps, total: ps.reduce((t, p) => t + parteUnaManito(p), 0) }; })
+    .filter((x) => x.ps.length > 0)
+    .sort((a, b) => b.total - a.total);
+  const total = porSocia.reduce((t, x) => t + x.total, 0);
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Kpi titulo="Por cobrar a socias" valor={soles(total)} nota={`${pendientes.length} servicios`} />
+        <Kpi titulo="Socias con saldo" valor={porSocia.length} />
+      </div>
+      <Tarjeta titulo="Saldos por socia">
+        {porSocia.length === 0 && <p className="text-suave">Todo al día 🎉</p>}
+        <div className="divide-y">
+          {porSocia.map(({ s, ps, total }) => (
+            <details key={s.id} className="py-3">
+              <summary className="flex cursor-pointer items-center gap-3">
+                <Avatar foto={s.foto} nombre={s.nombre} tam={40} />
+                <span className="flex-1"><b>{s.nombre}</b><span className="block text-sm text-suave">{ps.length} servicio{ps.length === 1 ? "" : "s"} · {s.telefono}</span></span>
+                <b className="text-lg">{soles(total)}</b>
+              </summary>
+              <div className="mt-2 space-y-1 pl-12 text-sm">
+                {ps.map((p) => (
+                  <div key={p.id} className="flex justify-between"><span>{formatoFecha(p.creadoEn)} · {p.ubicacion.distrito} · <span className="capitalize">{p.pago.metodo}</span></span><span>{soles(parteUnaManito(p))}</span></div>
+                ))}
+                <button className="btn-primario mt-2 !w-auto px-5"
+                  onClick={() => confirm(`¿Confirmas que recibiste ${soles(total)} de ${s.nombre}?`) && accion(() => marcarLiquidado(ps.map((p) => p.id)))}>
+                  ✅ Marcar {soles(total)} como recibido
+                </button>
+              </div>
+            </details>
+          ))}
+        </div>
+      </Tarjeta>
+    </div>
+  );
+}
+
+/** Libro de Reclamaciones: plazo legal de respuesta de 15 días hábiles. */
+function Reclamos() {
+  const { reclamaciones, responderReclamo } = useDatos();
+  const [respuestas, setRespuestas] = useState<Record<string, string>>({});
+  const diasHabiles = (desde: string) => {
+    let n = 0; const d = new Date(desde); const hoy = new Date();
+    while (d < hoy) { d.setDate(d.getDate() + 1); if (d.getDay() % 6 !== 0) n++; }
+    return n;
+  };
+  const abiertas = reclamaciones.filter((r) => !r.respuesta);
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Kpi titulo="Sin responder" valor={abiertas.length} nota="Plazo legal: 15 días hábiles" />
+        <Kpi titulo="Total registradas" valor={reclamaciones.length} />
+      </div>
+      {reclamaciones.length === 0 && <div className="tarjeta text-suave">No hay reclamaciones registradas.</div>}
+      {reclamaciones.map((r) => {
+        const dias = diasHabiles(r.creadoEn);
+        return (
+          <div key={r.id} className={`tarjeta space-y-2 ${!r.respuesta && dias >= 10 ? "border-2 border-red-400" : ""}`}>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <b>N.° {String(r.numero).padStart(6, "0")} · <span className="capitalize">{r.tipo}</span></b>
+              <span className={`rounded-full px-3 py-1 text-sm font-bold ${r.respuesta ? "bg-green-100 text-green-800" : dias >= 10 ? "bg-red-100 text-red-700" : "bg-acento-claro text-amber-900"}`}>
+                {r.respuesta ? "Respondido" : `${dias} de 15 días hábiles`}
+              </span>
+            </div>
+            <p className="text-sm text-suave">{new Date(r.creadoEn).toLocaleString("es-PE")} · {r.nombre} · {r.tipoDocumento} {r.documento} · {r.email}{r.telefono ? ` · ${r.telefono}` : ""}</p>
+            <p className="text-sm"><b>Contrató:</b> {r.descripcionBien}{r.monto != null ? ` (${soles(r.monto)})` : ""}</p>
+            <p><b>Detalle:</b> {r.detalle}</p>
+            <p><b>Pide:</b> {r.pedidoConsumidor}</p>
+            {r.respuesta ? (
+              <p className="rounded-xl bg-green-50 p-3 text-sm"><b>Respuesta ({new Date(r.respondidoEn!).toLocaleDateString("es-PE")}):</b> {r.respuesta}</p>
+            ) : (
+              <div className="space-y-2">
+                <textarea className="campo" rows={3} placeholder="Escribe la respuesta (también envíala por correo al cliente)" value={respuestas[r.id] ?? ""} onChange={(e) => setRespuestas({ ...respuestas, [r.id]: e.target.value })} />
+                <div className="flex flex-wrap gap-2">
+                  <button className="btn-primario !w-auto px-5" onClick={() => accion(() => responderReclamo(r.id, respuestas[r.id] ?? ""))}>Guardar respuesta</button>
+                  <a className="btn-borde !w-auto px-5" href={`mailto:${r.email}?subject=${encodeURIComponent(`Respuesta a su ${r.tipo} N.° ${String(r.numero).padStart(6, "0")}`)}&body=${encodeURIComponent(respuestas[r.id] ?? "")}`}>✉️ Enviar por correo</a>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

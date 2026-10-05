@@ -1,7 +1,7 @@
 "use client";
 // Contrato de la capa de datos: lo implementan el modo demo (store.tsx) y Supabase (store-supabase.tsx).
 import { createContext } from "react";
-import type { Calificacion, Cliente, Config, DatosPersonales, MetodoPago, Pedido, Socia, VerificacionSocia } from "./tipos";
+import type { Calificacion, Cliente, Config, DatosPersonales, Horario, MetodoPago, Pedido, Reclamacion, Socia, VerificacionSocia } from "./tipos";
 
 export type Rol = "cliente" | "socia" | "admin" | "ceo";
 export interface Sesion { rol: Rol; id: string }
@@ -22,10 +22,13 @@ export interface Datos {
   /** Todos los usuarios (solo lo ve el equipo). */
   usuarios: Usuario[];
   invitaciones: Invitacion[];
+  /** Libro de Reclamaciones: el equipo ve todas; cada usuario, las suyas. */
+  reclamaciones: Reclamacion[];
 }
 
-export type NuevoPedido = Omit<Pedido, "id" | "estado" | "pago" | "creadoEn" | "clienteId" | "comisionPct" | "propina" | "motivoCancelacion">;
-export type NuevaSocia = Omit<Socia, "id" | "estado" | "disponible" | "calificacion" | "serviciosHechos" | "foto" | "dni" | "personal" | "verificacion"> & {
+export type NuevoPedido = Omit<Pedido, "id" | "estado" | "pago" | "creadoEn" | "clienteId" | "comisionPct" | "propina" | "motivoCancelacion" | "cargoServicio" | "liquidado" | "planOrigen">;
+export type NuevaReclamacion = Omit<Reclamacion, "id" | "numero" | "creadoEn" | "respuesta" | "respondidoEn">;
+export type NuevaSocia = Omit<Socia, "id" | "estado" | "disponible" | "calificacion" | "serviciosHechos" | "horario" | "foto" | "dni" | "personal" | "verificacion"> & {
   foto: File | string;
   personal: DatosPersonales;
   verificacion: Omit<VerificacionSocia, "dniFrente" | "dniReverso">;
@@ -71,6 +74,14 @@ export interface Api extends Datos {
   /** Solo el CEO: invitar por correo al equipo. Si ya tiene cuenta, cambia su rol al toque. */
   invitarUsuario: (email: string, nombre: string, rol: "admin" | "ceo") => Promise<void>;
   eliminarInvitacion: (email: string) => Promise<void>;
+  /** El cliente detiene su plan recurrente (no se agendan más visitas). */
+  detenerPlan: (pedidoId: string) => Promise<void>;
+  setHorario: (h: Horario) => Promise<void>;
+  /** Equipo: marca como cobrada la parte de Una Manito de esos pedidos. */
+  marcarLiquidado: (pedidoIds: string[]) => Promise<void>;
+  /** Cualquiera (con o sin cuenta). Devuelve el número correlativo. */
+  registrarReclamo: (r: NuevaReclamacion) => Promise<number>;
+  responderReclamo: (id: string, respuesta: string) => Promise<void>;
   reiniciar: () => void; // solo demo
 }
 

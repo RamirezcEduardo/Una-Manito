@@ -1,8 +1,9 @@
 "use client";
 import { use, useEffect, useState } from "react";
+import { AgregarCalendario, BotonEmergencia, BotonWhatsApp } from "@/components/Extras";
 import { Mapa } from "@/components/MapaDinamico";
 import { Avatar, Cabecera, Contactar, EstadoBadge, Estrellas, FormCalificar, NivelBadge, Pantalla, accion } from "@/components/ui";
-import { formatoFecha, MOTIVOS_CANCELACION, PROPINAS, soles } from "@/lib/config";
+import { FRECUENCIAS, formatoFecha, MOTIVOS_CANCELACION, PROPINAS, soles } from "@/lib/config";
 import { useDatos } from "@/lib/store";
 import type { EstadoPedido, MetodoPago } from "@/lib/tipos";
 
@@ -11,7 +12,7 @@ const PASO_TEXTO = ["Buscando", "Aceptado", "En camino", "En curso", "Terminado"
 
 export default function DetallePedido({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { pedidos, socias, cancelarPedido, marcarPagado, calificar, listo } = useDatos();
+  const { pedidos, socias, config, cancelarPedido, marcarPagado, calificar, detenerPlan, listo } = useDatos();
   const p = pedidos.find((x) => x.id === id);
   const [cancelando, setCancelando] = useState(false);
   const [paciencia, setPaciencia] = useState(false); // "Seguir esperando"
@@ -72,12 +73,25 @@ export default function DetallePedido({ params }: { params: Promise<{ id: string
           <p>🧴 {p.conMateriales ? "La socia lleva materiales" : "Materiales de la casa"}</p>
           {p.tareas.length > 0 && <p>✅ {p.tareas.join(", ")}</p>}
           {p.notas && <p>📝 {p.notas}</p>}
+          {p.frecuencia !== "unica" && <p className="font-semibold text-green-700">🔁 Plan {FRECUENCIAS.find((f) => f.id === p.frecuencia)?.texto.toLowerCase()} con la misma socia</p>}
           {p.recargo > 0 && <p className="text-sm text-suave">Incluye recargo de {soles(p.recargo)}</p>}
-          <p className="text-xl font-extrabold">Total: {soles(p.total)}</p>
+          {p.descuento > 0 && <p className="text-sm text-green-700">Incluye descuento por plan de {soles(p.descuento)}</p>}
+          {p.cargoServicio > 0 && <p className="text-sm text-suave">Servicio {soles(p.total)} + cargo de servicio {soles(p.cargoServicio)}</p>}
+          <p className="text-xl font-extrabold">Total: {soles(p.total + p.cargoServicio)}</p>
           {p.propina > 0 && <p className="font-semibold text-green-700">+ Propina para tu socia: {soles(p.propina)} 💚</p>}
         </div>
 
-        {p.estado === "terminado" && <Pago total={p.total} estado={p.pago.estado} metodo={p.pago.metodo} onPagar={(m, propina) => accion(() => marcarPagado(p.id, m, propina))} />}
+        <AgregarCalendario pedido={p} titulo={`Una Manito: ${config.servicios.find((x) => x.id === p.servicio)?.nombre ?? "servicio"}`} />
+        <BotonEmergencia pedido={p} quien="cliente" />
+
+        {p.frecuencia !== "unica" && !["terminado", "cancelado"].includes(p.estado) && (
+          <button className="w-full py-2 text-sm font-semibold text-suave underline"
+            onClick={() => confirm("¿Detener tu plan? Esta visita se mantiene, pero no se agendarán más.") && accion(() => detenerPlan(p.id))}>
+            Detener mi plan recurrente
+          </button>
+        )}
+
+        {p.estado === "terminado" && <Pago total={p.total + p.cargoServicio} estado={p.pago.estado} metodo={p.pago.metodo} onPagar={(m, propina) => accion(() => marcarPagado(p.id, m, propina))} />}
 
         {p.estado === "terminado" && socia && (p.calificacionSocia
           ? <div className="tarjeta"><p className="font-bold">Tu calificación</p><Estrellas valor={p.calificacionSocia.estrellas} /></div>
@@ -101,6 +115,7 @@ export default function DetallePedido({ params }: { params: Promise<{ id: string
           </div>
         )}
       </Pantalla>
+      <BotonWhatsApp mensaje={`Hola Una Manito, tengo una consulta sobre mi pedido ${p.id.slice(0, 8)}.`} />
     </>
   );
 }

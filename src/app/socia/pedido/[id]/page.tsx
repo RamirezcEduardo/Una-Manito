@@ -1,8 +1,9 @@
 "use client";
 import { use } from "react";
+import { AgregarCalendario, BotonEmergencia } from "@/components/Extras";
 import { Mapa } from "@/components/MapaDinamico";
 import { Cabecera, Contactar, EstadoBadge, Estrellas, FormCalificar, Pantalla, accion } from "@/components/ui";
-import { comisionDe, ETIQUETA_ESTADO, gananciaSocia, SIGUIENTE_ESTADO, soles } from "@/lib/config";
+import { comisionDe, ETIQUETA_ESTADO, FRECUENCIAS, formatoFecha, gananciaSocia, pagoCliente, parteUnaManito, SIGUIENTE_ESTADO, soles } from "@/lib/config";
 import { useDatos } from "@/lib/store";
 
 const BOTON = { aceptado: "🛵 Voy en camino", en_camino: "✨ Llegué, empezar servicio", en_curso: "✅ Terminé el servicio" } as const;
@@ -31,6 +32,7 @@ export default function PedidoSocia({ params }: { params: Promise<{ id: string }
           <p>📍 {p.ubicacion.direccion}, {p.ubicacion.distrito}</p>
           {p.ubicacion.referencia && <p className="text-suave">Ref: {p.ubicacion.referencia}</p>}
           <a className="font-semibold text-marca" target="_blank" href={`https://www.google.com/maps/dir/?api=1&destination=${p.ubicacion.lat},${p.ubicacion.lng}`}>🧭 Cómo llegar</a>
+          <p>🕒 {formatoFecha(p.fecha)}{p.frecuencia !== "unica" && <b className="text-green-700"> · 🔁 {FRECUENCIAS.find((f) => f.id === p.frecuencia)?.texto.toLowerCase()}</b>}</p>
           <p>⏱️ {p.horas} h · 🧴 {p.conMateriales ? "Llevas tus materiales" : "Materiales del cliente"}</p>
           {p.tareas.length > 0 && (
             <div className="rounded-xl bg-marca-claro p-3">
@@ -47,7 +49,13 @@ export default function PedidoSocia({ params }: { params: Promise<{ id: string }
           <div className="flex justify-between text-suave"><span>Comisión Una Manito ({p.comisionPct}%)</span><span>− {soles(comisionDe(p))}</span></div>
           {p.propina > 0 && <div className="flex justify-between font-semibold text-green-700"><span>Propina (100% tuya) 💚</span><span>+ {soles(p.propina)}</span></div>}
           <div className="flex justify-between text-xl font-extrabold text-marca"><span>Tú ganas</span><span>{soles(neto)}</span></div>
+          <div className="mt-2 space-y-1 rounded-xl bg-gray-50 p-3 text-sm">
+            <div className="flex justify-between"><span>💵 Cobra al cliente{p.cargoServicio > 0 ? " (incluye cargo de servicio)" : ""}</span><b>{soles(pagoCliente(p))}</b></div>
+            <div className="flex justify-between text-suave"><span>De eso, le pasas a Una Manito</span><span>{soles(parteUnaManito(p))}</span></div>
+          </div>
         </div>
+        <AgregarCalendario pedido={p} titulo="Una Manito: servicio" />
+        <BotonEmergencia pedido={p} quien="socia" />
 
         {sig && <button className="btn-primario py-6 text-xl" onClick={() => accion(() => avanzarPedido(p.id))}>{BOTON[p.estado as keyof typeof BOTON] ?? ETIQUETA_ESTADO[sig].texto}</button>}
 

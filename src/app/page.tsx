@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ESLOGAN_SOCIA } from "@/lib/config";
 import { useDatos } from "@/lib/store";
+import { EnlaceReclamaciones } from "@/components/Extras";
 
 // Tarjetas que se turnan sobre el video: cuentan cómo funciona la app.
 const ESTADOS = [
@@ -122,7 +123,7 @@ export default function Inicio() {
       </section>
 
       <footer className="pb-8 text-center text-sm text-suave">
-        <Link href="/terminos" className="underline">Términos</Link> · <Link href="/privacidad" className="underline">Privacidad</Link>
+        <Link href="/terminos" className="underline">Términos</Link> · <Link href="/privacidad" className="underline">Privacidad</Link> · <EnlaceReclamaciones />
         {demo && <><br /><button className="mt-3 underline" onClick={() => ir("ceo", "u-ceo", "/admin")}>Entrar como CEO (demo)</button></>}
       </footer>
     </main>

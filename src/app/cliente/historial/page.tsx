@@ -17,7 +17,7 @@ export default function Historial() {
           return (
             <Link key={p.id} href={`/cliente/pedido/${p.id}`} className="tarjeta block space-y-1">
               <div className="flex items-center justify-between"><b>{s.icono} {s.nombre}</b><EstadoBadge estado={p.estado} /></div>
-              <p className="text-suave">{new Date(p.creadoEn).toLocaleDateString("es-PE")} · {p.ubicacion.distrito} · {soles(p.total)}</p>
+              <p className="text-suave">{new Date(p.creadoEn).toLocaleDateString("es-PE")} · {p.ubicacion.distrito} · {soles(p.total + p.cargoServicio)}</p>
             </Link>
           );
         })}

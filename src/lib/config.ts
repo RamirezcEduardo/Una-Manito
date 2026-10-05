@@ -1,4 +1,4 @@
-import type { Config, EstadoPedido, Servicio } from "./tipos";
+import type { Config, EstadoPedido, Frecuencia, Horario, Servicio } from "./tipos";
 
 export const ESLOGAN_CLIENTE = "Te damos una manito, al toque."; // general; cada servicio tiene el suyo
 export const ESLOGAN_SOCIA = "Te damos una manito para crecer.";
@@ -26,6 +26,9 @@ export const CONFIG_INICIAL: Config = {
   comisionPct: 15,
   recargoUrgentePct: 10,
   recargoFindePct: 10,
+  cargoServicio: 0,
+  descuentoPlanPct: 5,
+  whatsappSoporte: "",
   distritos: [
     ...DISTRITOS_LIMA_TODOS.map((nombre) => ({ nombre, habilitado: true })),
     ...DISTRITOS_CALLAO.map((nombre) => ({ nombre, habilitado: false })),
@@ -52,16 +55,20 @@ export const esFinDeSemana = (fecha: string) => fecha !== "asap" && [0, 6].inclu
 
 /**
  * Precio del pedido. Debe coincidir con el cálculo de la base de datos (pedidos_antes_insertar):
- * base = precio por hora × horas + materiales; recargo = base × (% urgencia + % fin de semana).
+ * base = precio por hora × horas + materiales; recargo = base × (% urgencia + % fin de semana);
+ * descuento = (base + recargo) × % de plan si es semanal o quincenal. El cargo de servicio va aparte.
  */
-export function calcularPrecio(s: Servicio, horas: number, conMateriales: boolean, fecha: string, c: Pick<Config, "recargoUrgentePct" | "recargoFindePct">) {
+export function calcularPrecio(s: Servicio, horas: number, conMateriales: boolean, fecha: string,
+  c: Pick<Config, "recargoUrgentePct" | "recargoFindePct" | "descuentoPlanPct" | "cargoServicio">, frecuencia: Frecuencia = "unica") {
   const base = s.precioHora * horas + (conMateriales ? s.recargoMateriales : 0);
   const motivos: string[] = [];
   let pct = 0;
   if (fecha === "asap" && c.recargoUrgentePct > 0) { pct += c.recargoUrgentePct; motivos.push(`Lo antes posible +${c.recargoUrgentePct}%`); }
   if (esFinDeSemana(fecha) && c.recargoFindePct > 0) { pct += c.recargoFindePct; motivos.push(`Fin de semana +${c.recargoFindePct}%`); }
   const recargo = Math.round(base * pct) / 100;
-  return { base, recargo, total: base + recargo, motivos };
+  const descuento = frecuencia !== "unica" ? Math.round((base + recargo) * c.descuentoPlanPct) / 100 : 0;
+  const total = Math.round((base + recargo - descuento) * 100) / 100;
+  return { base, recargo, descuento, total, cargoServicio: c.cargoServicio, aPagar: total + c.cargoServicio, motivos };
 }
 
 /** Lo que gana la socia: el total menos la comisión, más la propina completa. */
@@ -69,6 +76,36 @@ export function calcularPrecio(s: Servicio, horas: number, conMateriales: boolea
 export const comisionDe = (p: { total: number; comisionPct: number }) => Math.round(p.total * p.comisionPct) / 100;
 export const gananciaSocia = (p: { total: number; comisionPct: number; propina: number }) =>
   Math.round((p.total - comisionDe(p) + (p.propina || 0)) * 100) / 100;
+
+/** Lo que paga el cliente: servicio + cargo de servicio + propina. */
+export const pagoCliente = (p: { total: number; cargoServicio: number; propina: number }) =>
+  Math.round((p.total + (p.cargoServicio || 0) + (p.propina || 0)) * 100) / 100;
+/** Lo que la socia le debe a Una Manito cuando el cliente le paga directo: comisión + cargo de servicio. */
+export const parteUnaManito = (p: { total: number; comisionPct: number; cargoServicio: number }) =>
+  Math.round((comisionDe(p) + (p.cargoServicio || 0)) * 100) / 100;
+
+export const FRECUENCIAS: { id: Frecuencia; texto: string; dias: number }[] = [
+  { id: "unica", texto: "Solo esta vez", dias: 0 },
+  { id: "quincenal", texto: "Cada 15 días", dias: 14 },
+  { id: "semanal", texto: "Cada semana", dias: 7 },
+];
+
+export const DIAS_SEMANA: { id: keyof Horario; corto: string; largo: string }[] = [
+  { id: "1", corto: "Lun", largo: "Lunes" }, { id: "2", corto: "Mar", largo: "Martes" }, { id: "3", corto: "Mié", largo: "Miércoles" },
+  { id: "4", corto: "Jue", largo: "Jueves" }, { id: "5", corto: "Vie", largo: "Viernes" }, { id: "6", corto: "Sáb", largo: "Sábado" },
+  { id: "7", corto: "Dom", largo: "Domingo" },
+];
+
+/** ¿El pedido cae dentro del horario de la socia? Sin horario = siempre. "Lo antes posible" = ahora. */
+export function enHorario(h: Horario | undefined, fecha: string) {
+  if (!h || Object.keys(h).length === 0) return true;
+  const f = fecha === "asap" ? new Date() : new Date(fecha);
+  const dia = String(((f.getDay() + 6) % 7) + 1) as keyof Horario;
+  const rango = h[dia];
+  if (!rango) return false;
+  const hora = f.getHours() + f.getMinutes() / 60;
+  return hora >= rango[0] && hora < rango[1];
+}
 
 export const MOTIVOS_CANCELACION = ["Ya no lo necesito", "Me equivoqué de fecha u hora", "Demoran en encontrar socia", "Encontré otra opción", "Otro motivo"];
 

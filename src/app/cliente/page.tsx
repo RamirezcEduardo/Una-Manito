@@ -1,13 +1,17 @@
 "use client";
 import Link from "next/link";
+import { BotonWhatsApp, EnlaceReclamaciones } from "@/components/Extras";
 import { Cabecera, EstadoBadge, Pantalla } from "@/components/ui";
-import { ESLOGAN_CLIENTE, soles } from "@/lib/config";
+import { ESLOGAN_CLIENTE, formatoFecha, soles } from "@/lib/config";
 import { useDatos } from "@/lib/store";
 
 export default function InicioCliente() {
   const { sesion, clientes, pedidos, config } = useDatos();
   const yo = clientes.find((c) => c.id === sesion?.id);
   const activos = pedidos.filter((p) => p.clienteId === sesion?.id && !["terminado", "cancelado"].includes(p.estado));
+  // Recordatorio de la próxima visita programada (las de las próximas 48 horas destacan).
+  const proxima = activos.filter((p) => p.fecha !== "asap" && new Date(p.fecha) > new Date()).sort((a, b) => a.fecha.localeCompare(b.fecha))[0];
+  const pronto = proxima && new Date(proxima.fecha).getTime() - Date.now() < 48 * 36e5;
 
   return (
     <>
@@ -18,10 +22,17 @@ export default function InicioCliente() {
           <p className="text-suave">{ESLOGAN_CLIENTE}</p>
         </div>
 
+        {pronto && (
+          <Link href={`/cliente/pedido/${proxima.id}`} className="tarjeta block bg-acento-claro">
+            <p className="font-bold">⏰ Recuerda: tu próxima visita es {formatoFecha(proxima.fecha)}</p>
+            <p className="text-sm text-suave">Deja la casa lista y, si usas tus materiales, tenlos a la mano.</p>
+          </Link>
+        )}
+
         {activos.map((p) => (
           <Link key={p.id} href={`/cliente/pedido/${p.id}`} className="tarjeta block border-l-8 border-acento">
             <div className="flex items-center justify-between"><span className="font-bold">Tu pedido</span><EstadoBadge estado={p.estado} /></div>
-            <p className="mt-1 text-suave">{p.ubicacion.direccion} · {soles(p.total)}</p>
+            <p className="mt-1 text-suave">{p.ubicacion.direccion} · {soles(p.total + p.cargoServicio)}{p.frecuencia !== "unica" ? " · 🔁 plan" : ""}</p>
           </Link>
         ))}
 
@@ -44,7 +55,9 @@ export default function InicioCliente() {
         </div>
 
         <Link href="/cliente/historial" className="btn-borde block text-center">Mis pedidos</Link>
+        <p className="text-center text-sm text-suave"><EnlaceReclamaciones /></p>
       </Pantalla>
+      <BotonWhatsApp />
     </>
   );
 }

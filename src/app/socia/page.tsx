@@ -2,8 +2,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
+import { BotonWhatsApp } from "@/components/Extras";
 import { Avatar, Cabecera, EstadoBadge, Pantalla, accion } from "@/components/ui";
-import { ESLOGAN_SOCIA, formatoFecha, gananciaSocia, nivelSocia, soles } from "@/lib/config";
+import { enHorario, ESLOGAN_SOCIA, formatoFecha, gananciaSocia, nivelSocia, parteUnaManito, soles } from "@/lib/config";
 import { prepararSonido, useAvisoPedidosNuevos, usePermisoAvisos } from "@/lib/avisos";
 import { useDatos } from "@/lib/store";
 
@@ -11,7 +12,7 @@ export default function PanelSocia() {
   const { sesion, socias, pedidos, config, setDisponible, aceptarPedido, listo } = useDatos();
   const router = useRouter();
   const yo = socias.find((s) => s.id === sesion?.id);
-  const cercanos = useMemo(() => (yo ? pedidos.filter((p) => p.estado === "buscando" && yo.distritos.includes(p.ubicacion.distrito) && yo.servicios.includes(p.servicio)) : []), [pedidos, yo]);
+  const cercanos = useMemo(() => (yo ? pedidos.filter((p) => p.estado === "buscando" && yo.distritos.includes(p.ubicacion.distrito) && yo.servicios.includes(p.servicio) && enHorario(yo.horario, p.fecha)) : []), [pedidos, yo]);
   const paraAviso = useMemo(() => cercanos.map((p) => ({ id: p.id, texto: `${p.ubicacion.distrito} · ${formatoFecha(p.fecha)} · ${p.horas} h` })), [cercanos]);
   const disponible = !!yo && yo.estado === "aprobada" && yo.disponible;
   useAvisoPedidosNuevos(paraAviso, disponible);
@@ -40,6 +41,7 @@ export default function PanelSocia() {
   const ganancias = terminados.reduce((t, p) => t + gananciaSocia(p), 0);
   const propinas = terminados.reduce((t, p) => t + (p.propina || 0), 0);
   const nivel = nivelSocia(yo);
+  const debes = terminados.filter((p) => p.pago.estado !== "pendiente" && !p.liquidado).reduce((t, p) => t + parteUnaManito(p), 0);
 
   return (
     <>
@@ -76,6 +78,11 @@ export default function PanelSocia() {
           <div className="tarjeta"><p className="text-sm text-suave">Servicios</p><p className="text-2xl font-extrabold">{terminados.length}</p></div>
         </div>
 
+        <div className="grid grid-cols-2 gap-3">
+          <Link href="/socia/billetera" className="tarjeta block text-center font-bold">💰 Mi billetera{debes > 0 && <span className="block text-sm font-normal text-amber-800">Por pasar: {soles(debes)}</span>}</Link>
+          <Link href="/socia/horario" className="tarjeta block text-center font-bold">📅 Mi horario<span className="block text-sm font-normal text-suave">{Object.keys(yo.horario ?? {}).length ? `${Object.keys(yo.horario).length} días` : "Todos los días"}</span></Link>
+        </div>
+
         {activos.map((p) => (
           <Link key={p.id} href={`/socia/pedido/${p.id}`} className="tarjeta block border-l-8 border-marca">
             <div className="flex items-center justify-between"><b>Servicio actual</b><EstadoBadge estado={p.estado} /></div>
@@ -85,7 +92,7 @@ export default function PanelSocia() {
 
         <h2 className="pt-2 text-lg font-bold">Pedidos cerca de ti</h2>
         {!yo.disponible && <p className="text-suave">Activa “disponible” para ver pedidos.</p>}
-        {yo.disponible && cercanos.length === 0 && <p className="text-suave">No hay pedidos por ahora. Te avisaremos 🔔</p>}
+        {yo.disponible && cercanos.length === 0 && <p className="text-suave">No hay pedidos por ahora en tus distritos y horario. Te avisaremos 🔔</p>}
         {yo.disponible && cercanos.map((p) => {
           const s = config.servicios.find((x) => x.id === p.servicio)!;
           return (
@@ -93,6 +100,7 @@ export default function PanelSocia() {
               <div className="flex justify-between"><b>{s.icono} {s.nombre}</b><b className="text-marca">{soles(gananciaSocia(p))}</b></div>
               {p.recargo > 0 && <p className="inline-block rounded-full bg-green-100 px-2 py-0.5 text-sm font-bold text-green-800">💰 Pago extra por {p.fecha === "asap" ? "urgencia" : "fin de semana"}</p>}
               <p className="text-suave">📍 {p.ubicacion.distrito} · 🕒 {formatoFecha(p.fecha)}</p>
+              {p.frecuencia !== "unica" && <p className="inline-block rounded-full bg-green-100 px-2 py-0.5 text-sm font-bold text-green-800">🔁 Cliente fijo: {p.frecuencia === "semanal" ? "cada semana" : "cada 15 días"}</p>}
               <p className="text-suave">⏱️ {p.horas} h · 🧴 {p.conMateriales ? "Llevas tus materiales" : "Materiales del cliente"}</p>
               {p.tareas.length > 0 && <p className="text-suave">✅ {p.tareas.join(", ")}</p>}
               <button className="btn-primario" onClick={() => accion(async () => { if (await aceptarPedido(p.id)) router.push(`/socia/pedido/${p.id}`); else alert("Otra socia ya tomó este pedido."); })}>Aceptar pedido</button>
@@ -100,6 +108,7 @@ export default function PanelSocia() {
           );
         })}
       </Pantalla>
+      <BotonWhatsApp mensaje="Hola Una Manito, soy socia y necesito ayuda." />
     </>
   );
 }

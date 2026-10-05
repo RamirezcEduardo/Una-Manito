@@ -7,7 +7,7 @@ import { CONFIG_INICIAL } from "./config";
 import { supabase as sbOpcional } from "./supabase";
 import type { Calificacion, Pedido, ServicioId } from "./tipos";
 
-const VACIO: Datos = { config: CONFIG_INICIAL, clientes: [], socias: [], pedidos: [], sesion: null, usuarios: [], invitaciones: [] };
+const VACIO: Datos = { config: CONFIG_INICIAL, clientes: [], socias: [], pedidos: [], sesion: null, usuarios: [], invitaciones: [], reclamaciones: [] };
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function aPedido(r: any, cals: any[]): Pedido {
@@ -30,6 +30,11 @@ function aPedido(r: any, cals: any[]): Pedido {
     recargo: Number(r.recargo ?? 0),
     total: Number(r.total),
     propina: Number(r.propina ?? 0),
+    descuento: Number(r.descuento ?? 0),
+    cargoServicio: Number(r.cargo_servicio ?? 0),
+    frecuencia: r.frecuencia ?? "unica",
+    planOrigen: r.plan_origen ?? undefined,
+    liquidado: !!r.liquidado,
     motivoCancelacion: r.motivo_cancelacion ?? undefined,
     comisionPct: Number(r.comision_pct),
     pago: { metodo: r.pago_metodo ?? undefined, estado: r.pago_estado },
@@ -68,6 +73,9 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       comisionPct: Number(cfg.data?.comision_pct ?? CONFIG_INICIAL.comisionPct),
       recargoUrgentePct: Number(cfg.data?.recargo_urgente_pct ?? CONFIG_INICIAL.recargoUrgentePct),
       recargoFindePct: Number(cfg.data?.recargo_finde_pct ?? CONFIG_INICIAL.recargoFindePct),
+      cargoServicio: Number(cfg.data?.cargo_servicio ?? CONFIG_INICIAL.cargoServicio),
+      descuentoPlanPct: Number(cfg.data?.descuento_plan_pct ?? CONFIG_INICIAL.descuentoPlanPct),
+      whatsappSoporte: (cfg.data?.whatsapp_soporte as string | null) ?? "",
       distritos: (dis.data ?? []).map((x: any) => ({ nombre: x.nombre, habilitado: x.habilitado })),
       servicios: (srv.data ?? []).map((x: any) => ({
         id: x.id as ServicioId, nombre: x.nombre, icono: x.icono, eslogan: x.eslogan, activo: x.activo,
@@ -82,7 +90,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const [perfiles, socias, privado, pedidos, cals, invitaciones, personales] = await Promise.all([
+    const [perfiles, socias, privado, pedidos, cals, invitaciones, personales, reclamos] = await Promise.all([
       sb.from("perfiles").select("*"),
       sb.from("socias").select("*"),
       sb.from("socias_privado").select("*"),
@@ -90,6 +98,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       sb.from("calificaciones").select("*"),
       sb.from("invitaciones").select("*").order("creado_en", { ascending: false }),
       sb.from("perfiles_privado").select("*"),
+      sb.from("reclamaciones").select("*").order("numero", { ascending: false }),
     ]);
     const personal = (id: string) => {
       const p = (personales.data ?? []).find((x: any) => x.id === id);
@@ -117,10 +126,16 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
             experiencia: v.experiencia ?? "", dniFrente: v.dni_frente ?? undefined, dniReverso: v.dni_reverso ?? undefined, declaraSinAntecedentes: !!v.declara_sin_antecedentes,
           })((privado.data ?? []).find((x: any) => x.id === s.id)),
           foto: s.foto_url, distritos: s.distritos, servicios: s.servicios, estado: s.estado,
-          disponible: s.disponible, calificacion: Number(s.calificacion), serviciosHechos: s.servicios_hechos,
+          disponible: s.disponible, calificacion: Number(s.calificacion), serviciosHechos: s.servicios_hechos, horario: s.horario ?? {},
         };
       }),
       pedidos: (pedidos.data ?? []).map((r: any) => aPedido(r, cals.data ?? [])),
+      reclamaciones: (reclamos.data ?? []).map((r: any) => ({
+        id: r.id, numero: Number(r.numero), creadoEn: r.creado_en, tipo: r.tipo, nombre: r.nombre, tipoDocumento: r.tipo_documento, documento: r.documento,
+        email: r.email, telefono: r.telefono ?? undefined, direccion: r.direccion ?? undefined, menorDeEdad: !!r.menor_de_edad, apoderado: r.apoderado ?? undefined,
+        bien: r.bien, monto: r.monto == null ? undefined : Number(r.monto), descripcionBien: r.descripcion_bien, detalle: r.detalle,
+        pedidoConsumidor: r.pedido_consumidor, respuesta: r.respuesta ?? undefined, respondidoEn: r.respondido_en ?? undefined,
+      })),
     });
     setListo(true);
   }, [sb]);
@@ -222,7 +237,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
         servicio: p.servicio, direccion: p.ubicacion.direccion, distrito: p.ubicacion.distrito,
         referencia: p.ubicacion.referencia || null, lat: p.ubicacion.lat, lng: p.ubicacion.lng,
         fecha: p.fecha === "asap" ? null : new Date(p.fecha).toISOString(),
-        horas: p.horas, con_materiales: p.conMateriales, notas: p.notas || null, tareas: p.tareas,
+        horas: p.horas, con_materiales: p.conMateriales, notas: p.notas || null, tareas: p.tareas, frecuencia: p.frecuencia,
       }).select("id").single();
       falla(error);
       await cargar();
@@ -238,7 +253,10 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     setEstadoSocia: async (id, estado) => { await rpc("set_estado_socia", { p_socia: id, p_estado: estado }); },
     setConfig: async (c) => {
       const r = await Promise.all([
-        sb.from("config").update({ comision_pct: c.comisionPct, recargo_urgente_pct: c.recargoUrgentePct, recargo_finde_pct: c.recargoFindePct }).eq("id", 1),
+        sb.from("config").update({
+          comision_pct: c.comisionPct, recargo_urgente_pct: c.recargoUrgentePct, recargo_finde_pct: c.recargoFindePct,
+          cargo_servicio: c.cargoServicio, descuento_plan_pct: c.descuentoPlanPct, whatsapp_soporte: c.whatsappSoporte || null,
+        }).eq("id", 1),
         ...c.servicios.map((s) => sb.from("servicios").update({ activo: s.activo, precio_hora: s.precioHora }).eq("id", s.id)),
         ...c.distritos.map((x) => sb.from("distritos").update({ habilitado: x.habilitado }).eq("nombre", x.nombre)),
       ]);
@@ -248,6 +266,20 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     setRolUsuario: async (id, rol) => { await rpc("set_rol_usuario", { p_usuario: id, p_rol: rol }); },
     invitarUsuario: async (email, nombre, rol) => { await rpc("invitar_usuario", { p_email: email, p_nombre: nombre, p_rol: rol }); },
     eliminarInvitacion: async (email) => { await rpc("eliminar_invitacion", { p_email: email }); },
+    detenerPlan: async (id) => { await rpc("detener_plan", { p_pedido: id }); },
+    setHorario: async (h) => { await rpc("set_horario", { p_horario: h }); },
+    marcarLiquidado: async (ids) => { await rpc("marcar_liquidado", { p_pedidos: ids }); },
+    registrarReclamo: async (r) => {
+      const { data, error } = await sb.rpc("registrar_reclamo", { p: {
+        tipo: r.tipo, nombre: r.nombre, tipo_documento: r.tipoDocumento, documento: r.documento, email: r.email, telefono: r.telefono ?? "",
+        direccion: r.direccion ?? "", menor_de_edad: r.menorDeEdad, apoderado: r.apoderado ?? "", bien: r.bien, monto: r.monto ?? "",
+        descripcion_bien: r.descripcionBien, detalle: r.detalle, pedido_consumidor: r.pedidoConsumidor,
+      } });
+      falla(error);
+      if (uidRef.current) await cargar();
+      return Number(data);
+    },
+    responderReclamo: async (id, respuesta) => { await rpc("responder_reclamo", { p_id: id, p_respuesta: respuesta }); },
     reiniciar: () => {},
   };
 

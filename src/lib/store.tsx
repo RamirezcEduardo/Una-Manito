@@ -19,12 +19,12 @@ const CLIENTES_DEMO = [
   { id: "c6", nombre: "Ricardo Vega", telefono: "987111005" },
 ];
 const SOCIAS_DEMO: Datos["socias"] = [
-  { id: "s1", nombre: "Rosa Quispe", telefono: "912345678", dni: "45678912", foto: "", distritos: ["Miraflores", "Surco", "Barranco"], servicios: ["limpieza"], estado: "aprobada", disponible: true, calificacion: 4.9, serviciosHechos: 132 },
-  { id: "s2", nombre: "Carmen Huamán", telefono: "923456789", dni: "41234567", foto: "", distritos: ["San Isidro", "Lince"], servicios: ["limpieza"], estado: "pendiente", disponible: false, calificacion: 0, serviciosHechos: 0,
+  { id: "s1", nombre: "Rosa Quispe", telefono: "912345678", dni: "45678912", foto: "", distritos: ["Miraflores", "Surco", "Barranco"], servicios: ["limpieza"], estado: "aprobada", disponible: true, calificacion: 4.9, serviciosHechos: 132, horario: { "1": [8, 18], "2": [8, 18], "3": [8, 18], "4": [8, 18], "5": [8, 18], "6": [9, 14] } },
+  { id: "s2", nombre: "Carmen Huamán", telefono: "923456789", dni: "41234567", foto: "", distritos: ["San Isidro", "Lince"], servicios: ["limpieza"], estado: "pendiente", disponible: false, calificacion: 0, serviciosHechos: 0, horario: {},
     personal: { tipoDocumento: "DNI", documento: "41234567", fechaNacimiento: "1988-04-12" },
     verificacion: { direccion: "Jr. Huáscar 456", distritoResidencia: "Jesús María", emergenciaNombre: "Pedro Huamán", emergenciaParentesco: "Hermano/a", emergenciaTelefono: "923000111", cobroNumero: "923456789", experiencia: "De 3 a 5 años", dniFrente: "/icono-512.png", dniReverso: "/icono-512.png", declaraSinAntecedentes: true } },
-  { id: "s3", nombre: "Elena Mamani", telefono: "934567890", dni: "42345678", foto: "", distritos: ["San Isidro", "San Borja", "Surco"], servicios: ["limpieza"], estado: "aprobada", disponible: false, calificacion: 4.7, serviciosHechos: 24 },
-  { id: "s4", nombre: "Julia Torres", telefono: "945678901", dni: "43456789", foto: "", distritos: ["Jesús María", "Lince", "Pueblo Libre"], servicios: ["limpieza"], estado: "aprobada", disponible: false, calificacion: 4.5, serviciosHechos: 8 },
+  { id: "s3", nombre: "Elena Mamani", telefono: "934567890", dni: "42345678", foto: "", distritos: ["San Isidro", "San Borja", "Surco"], servicios: ["limpieza"], estado: "aprobada", disponible: false, calificacion: 4.7, serviciosHechos: 24, horario: {} },
+  { id: "s4", nombre: "Julia Torres", telefono: "945678901", dni: "43456789", foto: "", distritos: ["Jesús María", "Lince", "Pueblo Libre"], servicios: ["limpieza"], estado: "aprobada", disponible: false, calificacion: 4.5, serviciosHechos: 8, horario: {} },
 ];
 const ZONAS: [string, number, number, string[]][] = [
   ["Miraflores", -12.1211, -77.0297, ["s1"]], ["Surco", -12.135, -76.995, ["s1", "s3"]], ["San Isidro", -12.097, -77.036, ["s3"]],
@@ -52,7 +52,7 @@ function semillaPedidos(): Pedido[] {
         id: `d${dia}-${k}`, clienteId: elegir(CLIENTES_DEMO).id, sociaId: cancelado ? undefined : elegir(sociasZona), servicio: "limpieza",
         ubicacion: { direccion: `Calle ${elegir(["Las Begonias", "Los Pinos", "Schell", "Benavides", "Pardo", "Javier Prado"])} ${100 + Math.floor(azar() * 900)}`, distrito, lat, lng },
         fecha: urgente ? "asap" : creado.toISOString(), horas, conMateriales, tareas: ["Cocina", "Baños", "Pisos"],
-        estado: cancelado ? "cancelado" : "terminado", recargo, total: base + recargo, propina: !cancelado && azar() < 0.35 ? elegir([5, 10, 20]) : 0,
+        estado: cancelado ? "cancelado" : "terminado", recargo, descuento: 0, cargoServicio: 0, frecuencia: "unica", liquidado: dia > 6, total: base + recargo, propina: !cancelado && azar() < 0.35 ? elegir([5, 10, 20]) : 0,
         comisionPct: 15, pago: cancelado ? { estado: "pendiente" } : { metodo: elegir(["yape", "plin", "efectivo"] as const), estado: "confirmado" },
         motivoCancelacion: cancelado ? "Ya no lo necesito" : undefined,
         calificacionSocia: cancelado ? undefined : { estrellas: elegir([5, 5, 5, 4]) }, creadoEn: creado.toISOString(),
@@ -66,7 +66,7 @@ const PEDIDOS_DEMO = semillaPedidos();
 const CEO_DEMO = { id: "u-ceo", nombre: "Eduardo Ramírez", telefono: "999888777", email: "ceo@unamanito.pe", rol: "ceo" as const, creadoEn: "2026-09-01T10:00:00" };
 
 const SEMILLA: Datos = {
-  config: CONFIG_INICIAL,
+  config: { ...CONFIG_INICIAL, cargoServicio: 3, whatsappSoporte: "987654321" },
   clientes: [...CLIENTES_DEMO, { id: CEO_DEMO.id, nombre: CEO_DEMO.nombre, telefono: CEO_DEMO.telefono }],
   socias: SOCIAS_DEMO,
   pedidos: PEDIDOS_DEMO,
@@ -78,9 +78,14 @@ const SEMILLA: Datos = {
     ...SOCIAS_DEMO.map((s, i) => ({ id: s.id, nombre: s.nombre, telefono: s.telefono, email: `${s.nombre.split(" ")[0].toLowerCase()}@correo.pe`, rol: "socia" as const, creadoEn: new Date(Date.now() - (35 - i * 6) * 864e5).toISOString() })),
   ],
   invitaciones: [{ email: "marketing@unamanito.pe", nombre: "Equipo de marketing", rol: "admin", creadoEn: new Date().toISOString() }],
+  reclamaciones: [{
+    id: "r1", numero: 1, creadoEn: new Date(Date.now() - 2 * 864e5).toISOString(), tipo: "reclamo", nombre: "Diego Ramos", tipoDocumento: "DNI", documento: "44556677",
+    email: "diego@correo.pe", telefono: "987111003", menorDeEdad: false, bien: "servicio", monto: 55, descripcionBien: "Limpieza del hogar, 3 horas",
+    detalle: "La socia llegó 40 minutos tarde y no alcanzó a limpiar la cocina.", pedidoConsumidor: "Que me descuenten una hora del servicio.",
+  }],
 };
 
-const CLAVE = "una-manito-demo-v6";
+const CLAVE = "una-manito-demo-v7";
 const nuevoId = (p: string) => p + Math.random().toString(36).slice(2, 8);
 const SIGUIENTE: Partial<Record<EstadoPedido, EstadoPedido>> = { aceptado: "en_camino", en_camino: "en_curso", en_curso: "terminado" };
 
@@ -147,7 +152,7 @@ function DemoProvider({ children }: { children: ReactNode }) {
       const extra = { personal, dni: personal.tipoDocumento === "DNI" ? personal.documento : undefined,
         verificacion: { ...verificacion, dniFrente: URL.createObjectURL(dniFrente), dniReverso: URL.createObjectURL(dniReverso) } };
       mod((x) => ({
-        ...x, socias: [...x.socias, { ...datos, ...extra, foto, id, estado: "pendiente", disponible: false, calificacion: 0, serviciosHechos: 0 }],
+        ...x, socias: [...x.socias, { ...datos, ...extra, foto, id, estado: "pendiente", disponible: false, calificacion: 0, serviciosHechos: 0, horario: {} }],
         usuarios: [...x.usuarios, { id, nombre: s.nombre, telefono: s.telefono, rol: "socia", personal, creadoEn: new Date().toISOString() }], sesion: { rol: "socia", id },
       }));
     },
@@ -155,7 +160,8 @@ function DemoProvider({ children }: { children: ReactNode }) {
       const id = nuevoId("p");
       mod((x) => ({
         ...x,
-        pedidos: [{ ...p, id, clienteId: x.sesion!.id, estado: "buscando", pago: { estado: "pendiente" }, propina: 0, comisionPct: x.config.comisionPct, creadoEn: new Date().toISOString() }, ...x.pedidos],
+        pedidos: [{ ...p, id, clienteId: x.sesion!.id, estado: "buscando", pago: { estado: "pendiente" }, propina: 0, comisionPct: x.config.comisionPct,
+          cargoServicio: x.config.cargoServicio, liquidado: false, creadoEn: new Date().toISOString() }, ...x.pedidos],
       }));
       return id;
     },
@@ -165,7 +171,19 @@ function DemoProvider({ children }: { children: ReactNode }) {
       modPedido(pedidoId, (p) => (p.estado === "buscando" ? { ...p, estado: "aceptado", sociaId: d.sesion!.id } : p));
       return true;
     },
-    avanzarPedido: async (id) => modPedido(id, (p) => ({ ...p, estado: SIGUIENTE[p.estado] ?? p.estado })),
+    avanzarPedido: async (id) => mod((x) => {
+      const p = x.pedidos.find((y) => y.id === id);
+      if (!p) return x;
+      const estado = SIGUIENTE[p.estado] ?? p.estado;
+      const pedidos = x.pedidos.map((y) => (y.id === id ? { ...y, estado } : y));
+      // Plan recurrente: al terminar, se agenda la siguiente visita con la misma socia.
+      if (estado === "terminado" && p.frecuencia !== "unica" && p.fecha !== "asap") {
+        const fecha = new Date(new Date(p.fecha).getTime() + (p.frecuencia === "semanal" ? 7 : 14) * 864e5).toISOString();
+        pedidos.unshift({ ...p, id: nuevoId("p"), estado: "aceptado", fecha, planOrigen: p.planOrigen ?? p.id, propina: 0, liquidado: false,
+          pago: { estado: "pendiente" }, calificacionSocia: undefined, calificacionCliente: undefined, cargoServicio: x.config.cargoServicio, creadoEn: new Date().toISOString() });
+      }
+      return { ...x, pedidos };
+    }),
     cancelarPedido: async (id, motivo) => modPedido(id, (p) => ({ ...p, estado: "cancelado", motivoCancelacion: motivo })),
     marcarPagado: async (id, metodo, propina = 0) => modPedido(id, (p) => ({ ...p, propina, pago: { metodo, estado: "marcado_pagado" } })),
     confirmarPago: async (id) => modPedido(id, (p) => ({ ...p, pago: { ...p.pago, estado: "confirmado" } })),
@@ -193,6 +211,18 @@ function DemoProvider({ children }: { children: ReactNode }) {
       mod((x) => ({ ...x, invitaciones: [{ email: correo, nombre: nombre.trim() || undefined, rol, creadoEn: new Date().toISOString() }, ...x.invitaciones.filter((i) => i.email !== correo)] }));
     },
     eliminarInvitacion: async (email) => mod((x) => ({ ...x, invitaciones: x.invitaciones.filter((i) => i.email !== email) })),
+    detenerPlan: async (id) => modPedido(id, (p) => ({ ...p, frecuencia: "unica" })),
+    setHorario: async (horario) => mod((x) => ({ ...x, socias: x.socias.map((s) => (s.id === x.sesion?.id ? { ...s, horario } : s)) })),
+    marcarLiquidado: async (ids) => mod((x) => ({ ...x, pedidos: x.pedidos.map((p) => (ids.includes(p.id) ? { ...p, liquidado: true } : p)) })),
+    registrarReclamo: async (r) => {
+      const numero = Math.max(0, ...d.reclamaciones.map((x) => x.numero)) + 1;
+      mod((x) => ({ ...x, reclamaciones: [{ ...r, id: nuevoId("r"), numero, creadoEn: new Date().toISOString() }, ...x.reclamaciones] }));
+      return numero;
+    },
+    responderReclamo: async (id, respuesta) => {
+      if (respuesta.trim().length < 5) throw new Error("Escribe una respuesta");
+      mod((x) => ({ ...x, reclamaciones: x.reclamaciones.map((r) => (r.id === id ? { ...r, respuesta: respuesta.trim(), respondidoEn: new Date().toISOString() } : r)) }));
+    },
     reiniciar: () => setD(SEMILLA),
   };
 
