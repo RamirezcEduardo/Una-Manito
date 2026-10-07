@@ -58,11 +58,18 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
   const [sinPerfil, setSinPerfil] = useState(false);
   const uidRef = useRef<string | null>(null);
   const [nombreGuardado, setNombreGuardado] = useState("");
+  const [rolGuardado, setRolGuardado] = useState<"cliente" | "socia" | null>(null);
 
   const cargar = useCallback(async () => {
-    const { data: { user } } = await sb.auth.getUser();
+    const { data: { user }, error: errorUsuario } = await sb.auth.getUser();
+    // Sesión guardada que ya no es válida (usuario borrado o token vencido): se limpia para no quedar a medias.
+    if (errorUsuario && errorUsuario.status && errorUsuario.status >= 400 && errorUsuario.status < 500 && errorUsuario.name !== "AuthSessionMissingError") {
+      await sb.auth.signOut({ scope: "local" });
+    }
     uidRef.current = user?.id ?? null;
     setNombreGuardado((user?.user_metadata?.nombre as string | undefined) ?? "");
+    const r = user?.user_metadata?.rol;
+    setRolGuardado(r === "socia" || r === "cliente" ? r : null);
 
     const [srv, dis, cfg] = await Promise.all([
       sb.from("servicios").select("*").order("orden"),
@@ -166,6 +173,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     demo: false,
     sinPerfil,
     nombreGuardado,
+    rolGuardado,
     entrar: () => {},
     enviarCodigo: async (email) => {
       // Si el correo trae enlace en vez de código, el enlace vuelve a /entrar y la sesión se abre sola.
@@ -182,8 +190,9 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       falla(error);
       await cargar();
     },
-    crearCuenta: async (email, contrasena, nombre) => {
-      const { data, error } = await sb.auth.signUp({ email, password: contrasena, options: { emailRedirectTo: `${window.location.origin}/entrar`, data: { nombre } } });
+    crearCuenta: async (email, contrasena, nombre, rol) => {
+      // El enlace de confirmación vuelve con el tipo de cuenta, para llevarla al registro correcto.
+      const { data, error } = await sb.auth.signUp({ email, password: contrasena, options: { emailRedirectTo: `${window.location.origin}/entrar?rol=${rol}`, data: { nombre, rol } } });
       falla(error);
       // Supabase responde sin error a un correo ya registrado, pero sin identidades.
       if (data.user && data.user.identities?.length === 0) throw new Error("Ese correo ya tiene cuenta. Entra con tu contraseña o usa “¿Olvidaste tu contraseña?”.");

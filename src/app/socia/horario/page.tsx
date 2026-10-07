@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Cabecera, Pantalla, accion } from "@/components/ui";
 import { DIAS_SEMANA } from "@/lib/config";
 import { useDatos } from "@/lib/store";
@@ -14,7 +14,9 @@ export default function MiHorario() {
   const router = useRouter();
   const yo = socias.find((s) => s.id === sesion?.id);
   const [h, setH] = useState<Horario>({});
-  useEffect(() => { if (yo) setH(yo.horario ?? {}); }, [yo]);
+  // Se carga una sola vez: las recargas en tiempo real no deben borrar lo que la socia está editando.
+  const cargado = useRef(false);
+  useEffect(() => { if (yo && !cargado.current) { cargado.current = true; setH(yo.horario ?? {}); } }, [yo]);
   if (!listo) return null;
   if (!yo) return (<><Cabecera titulo="Mi horario" volver="/socia" /><Pantalla><p>No encontramos tu cuenta.</p></Pantalla></>);
 

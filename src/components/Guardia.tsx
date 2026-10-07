@@ -17,7 +17,8 @@ export default function Guardia({ children }: { children: ReactNode }) {
   if (!demo && listo && privada) {
     if (!sesion && !sinPerfil) destino = `/entrar?rol=${seccion === "socia" ? "socia" : "cliente"}`;
     else if (sinPerfil && !esRegistro) destino = seccion === "socia" ? "/socia/registro" : "/cliente/registro";
-    else if (sesion && !esRegistro && !esEquipo(sesion.rol) && sesion.rol !== seccion) destino = rutaDeRol(sesion.rol);
+    // Con sesión de otro tipo (p. ej. cliente entrando a /socia): se pregunta si quiere cambiar de cuenta.
+    else if (sesion && !esRegistro && !esEquipo(sesion.rol) && sesion.rol !== seccion) destino = seccion === "admin" ? rutaDeRol(sesion.rol) : `/entrar?rol=${seccion}`;
     else if (sesion && esRegistro) destino = rutaDeRol(sesion.rol);
   }
 

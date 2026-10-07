@@ -3,17 +3,21 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { Cabecera, Pantalla, mensajeError } from "@/components/ui";
-import { rutaDeRol } from "@/lib/api";
+import { esEquipo, rutaDeRol } from "@/lib/api";
 import { useDatos } from "@/lib/store";
 
 type Modo = "entrar" | "crear" | "codigo" | "olvido";
 
 function Formulario() {
-  const { enviarCodigo, verificarCodigo, entrarConContrasena, crearCuenta, recuperarContrasena, sesion, sinPerfil, listo } = useDatos();
+  const { enviarCodigo, verificarCodigo, entrarConContrasena, crearCuenta, recuperarContrasena, salir, sesion, sinPerfil, listo, rolGuardado } = useDatos();
   const router = useRouter();
   const params = useSearchParams();
-  const rol = params.get("rol") === "socia" ? "socia" : "cliente";
-  const [modo, setModo] = useState<Modo>(params.get("rol") ? "crear" : "entrar");
+  // ?rol=socia|cliente indica a qué app quiere entrar; ?modo=crear abre directamente "Crear cuenta".
+  const rolPedido = params.get("rol") === "socia" ? "socia" : params.get("rol") === "cliente" ? "cliente" : null;
+  const rol = rolPedido ?? rolGuardado ?? "cliente";
+  const [modo, setModo] = useState<Modo>(params.get("modo") === "crear" ? "crear" : "entrar");
+  // Hay una sesión abierta de otro tipo (p. ej. cliente) y se pidió entrar como socia: se pregunta antes de redirigir.
+  const otraCuenta = !!sesion && !!rolPedido && sesion.rol !== rolPedido;
   const [email, setEmail] = useState("");
   const [nombre, setNombre] = useState("");
   const [contrasena, setContrasena] = useState("");
@@ -29,8 +33,8 @@ function Formulario() {
   useEffect(() => {
     if (!listo) return;
     if (sinPerfil) router.replace(`/${rol}/registro`);
-    else if (sesion) router.replace(rutaDeRol(sesion.rol));
-  }, [listo, sinPerfil, sesion, rol, router]);
+    else if (sesion && !otraCuenta) router.replace(rutaDeRol(sesion.rol));
+  }, [listo, sinPerfil, sesion, rol, router, otraCuenta]);
 
   const correr = async (f: () => Promise<void>) => {
     setCargando(true); setError(""); setAviso("");
@@ -52,8 +56,24 @@ function Formulario() {
       </div></div>
   );
 
+  if (otraCuenta && sesion) {
+    const como = (r: string) => (r === "socia" ? "socia" : esEquipo(r as never) ? "parte del equipo" : "cliente");
+    return (
+      <Pantalla>
+        <div className="tarjeta space-y-3 text-center">
+          <div className="text-4xl">🔄</div>
+          <h2 className="text-xl font-extrabold">Ya tienes una sesión abierta como {como(sesion.rol)}</h2>
+          <p className="text-suave">Para entrar como {como(rolPedido!)}, primero cierra esta sesión.</p>
+          <button className="btn-primario" onClick={() => correr(salir)}>Cerrar sesión y entrar como {como(rolPedido!)}</button>
+          <button className="btn-borde" onClick={() => router.replace(rutaDeRol(sesion.rol))}>Seguir como {como(sesion.rol)}</button>
+        </div>
+      </Pantalla>
+    );
+  }
+
   return (
     <Pantalla>
+      {rol === "socia" && <p className="text-center font-semibold text-marca-oscuro">🧹 Acceso para socias</p>}
       {(modo === "entrar" || modo === "crear") && (
         <div className="grid grid-cols-2 gap-1 rounded-2xl bg-white p-1 ring-1 ring-black/5">
           {(["entrar", "crear"] as const).map((m) => (
@@ -80,7 +100,7 @@ function Formulario() {
             e.preventDefault();
             if (contrasena !== repetir) { setError("Las contraseñas no coinciden."); return; }
             correr(async () => {
-              const confirmar = await crearCuenta(email.trim(), contrasena, nombre.trim());
+              const confirmar = await crearCuenta(email.trim(), contrasena, nombre.trim(), rol);
               if (confirmar) setAviso(`Te enviamos un correo a ${email.trim()}. Toca el enlace para confirmar tu cuenta y luego entra con tu contraseña. Revisa también Spam.`);
             });
           }}>

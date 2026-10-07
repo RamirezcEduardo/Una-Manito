@@ -136,6 +136,7 @@ function DemoProvider({ children }: { children: ReactNode }) {
     entrarConContrasena: async () => {},
     crearCuenta: async () => false,
     nombreGuardado: "",
+    rolGuardado: null,
     recuperarContrasena: async () => {},
     cambiarContrasena: async () => {},
     verificarCodigo: async () => {},

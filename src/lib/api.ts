@@ -48,7 +48,9 @@ export interface Api extends Datos {
   /** Entrar con correo y contraseña. */
   entrarConContrasena: (email: string, contrasena: string) => Promise<void>;
   /** Crear cuenta con contraseña. Devuelve true si hay que confirmar el correo antes de entrar. */
-  crearCuenta: (email: string, contrasena: string, nombre: string) => Promise<boolean>;
+  crearCuenta: (email: string, contrasena: string, nombre: string, rol: "cliente" | "socia") => Promise<boolean>;
+  /** Tipo de cuenta que eligió al crearla (para llevarla al registro correcto tras confirmar el correo). */
+  rolGuardado: "cliente" | "socia" | null;
   /** Nombre y apellido que la persona escribió al crear su cuenta (para completar el registro). */
   nombreGuardado: string;
   /** Envía un correo para crear una contraseña nueva. */

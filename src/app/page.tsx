@@ -30,7 +30,7 @@ export default function Inicio() {
   const router = useRouter();
   // En modo demo se entra con usuarios de prueba; con Supabase se inicia sesión con código por correo.
   const ir = (rol: "cliente" | "socia" | "ceo", id: string | undefined, ruta: string) => {
-    if (!demo) return router.push(rol === "socia" ? "/entrar?rol=socia" : "/entrar");
+    if (!demo) return router.push(rol === "socia" ? "/entrar?rol=socia" : "/entrar?rol=cliente");
     if (id) entrar(rol, id);
     router.push(ruta);
   };
@@ -77,7 +77,7 @@ export default function Inicio() {
             Socias y socios verificados en tu distrito. Pide en 1 minuto y paga al terminar.
           </p>
           <div className="entrar mt-6 space-y-3" style={{ animationDelay: ".3s" }}>
-            <Link href={demo ? "/cliente/registro" : "/entrar?rol=cliente"} className="btn-primario block text-center">Pedir un servicio</Link>
+            <Link href={demo ? "/cliente/registro" : "/entrar?rol=cliente&modo=crear"} className="btn-primario block text-center">Pedir un servicio</Link>
             <button className="btn-borde" onClick={() => ir("cliente", clientes[0]?.id, "/cliente")}>Ya tengo cuenta</button>
           </div>
           <div className="mt-5 grid grid-cols-3 gap-2 text-center">
@@ -117,7 +117,7 @@ export default function Inicio() {
             <li>💚 Las propinas son 100% tuyas</li>
             <li>🌟 Sube de nivel y destaca ante los clientes</li>
           </ul>
-          <Link href={demo ? "/socia/registro" : "/entrar?rol=socia"} className="btn-acento block text-center">Quiero trabajar con Una Manito</Link>
+          <Link href={demo ? "/socia/registro" : "/entrar?rol=socia&modo=crear"} className="btn-acento block text-center">Quiero trabajar con Una Manito</Link>
           <button className="btn w-full bg-white text-tinta" onClick={() => ir("socia", socias[0]?.id, "/socia")}>Ya trabajo aquí, entrar</button>
         </div>
       </section>
