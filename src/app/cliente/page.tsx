@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { BotonWhatsApp, EnlaceReclamaciones } from "@/components/Extras";
+import { BotonWhatsApp } from "@/components/Extras";
+import { MenuInferior } from "@/components/Menu";
 import { Cabecera, EstadoBadge, Pantalla } from "@/components/ui";
 import { ESLOGAN_CLIENTE, formatoFecha, soles } from "@/lib/config";
 import { useDatos } from "@/lib/store";
@@ -54,10 +55,9 @@ export default function InicioCliente() {
           )}
         </div>
 
-        <Link href="/cliente/historial" className="btn-borde block text-center">Mis pedidos</Link>
-        <p className="text-center text-sm text-suave"><EnlaceReclamaciones /></p>
       </Pantalla>
       <BotonWhatsApp />
+      <MenuInferior rol="cliente" />
     </>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { MenuInferior } from "@/components/Menu";
 import { Cabecera, Pantalla, accion } from "@/components/ui";
 import { DIAS_SEMANA } from "@/lib/config";
 import { useDatos } from "@/lib/store";
@@ -29,7 +30,7 @@ export default function MiHorario() {
 
   return (
     <>
-      <Cabecera titulo="Mi horario" volver="/socia" />
+      <Cabecera titulo="Mi horario" />
       <Pantalla>
         <p className="text-suave">Marca los días y horas en que puedes trabajar. Solo te mostraremos pedidos dentro de tu horario.</p>
         {libre && <p className="rounded-xl bg-marca-claro p-3 text-sm font-semibold">Ahora ves pedidos de todos los días y a cualquier hora.</p>}
@@ -57,6 +58,7 @@ export default function MiHorario() {
         <button className="btn-primario" onClick={() => accion(async () => { await setHorario(h); router.push("/socia"); })}>Guardar horario</button>
         {!libre && <button className="w-full py-2 font-semibold text-marca" onClick={() => setH({})}>Quitar horario (trabajo cualquier día)</button>}
       </Pantalla>
+      <MenuInferior rol="socia" />
     </>
   );
 }

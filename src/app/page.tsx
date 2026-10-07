@@ -77,8 +77,8 @@ export default function Inicio() {
             Socias y socios verificados en tu distrito. Pide en 1 minuto y paga al terminar.
           </p>
           <div className="entrar mt-6 space-y-3" style={{ animationDelay: ".3s" }}>
-            <Link href={demo ? "/cliente/registro" : "/entrar?rol=cliente&modo=crear"} className="btn-primario block text-center">Pedir un servicio</Link>
-            <button className="btn-borde" onClick={() => ir("cliente", clientes[0]?.id, "/cliente")}>Ya tengo cuenta</button>
+            <button className="btn-primario" onClick={() => ir("cliente", clientes[0]?.id, "/cliente")}>Iniciar sesión</button>
+            <Link href={demo ? "/cliente/registro" : "/entrar?rol=cliente&modo=crear"} className="btn-borde block text-center">Crear cuenta</Link>
           </div>
           <div className="mt-5 grid grid-cols-3 gap-2 text-center">
             {beneficios.map((b, i) => (

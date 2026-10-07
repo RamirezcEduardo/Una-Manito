@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { MenuInferior } from "@/components/Menu";
 import { Cabecera, EstadoBadge, Pantalla } from "@/components/ui";
 import { soles } from "@/lib/config";
 import { useDatos } from "@/lib/store";
@@ -9,7 +10,7 @@ export default function Historial() {
   const mios = pedidos.filter((p) => p.clienteId === sesion?.id);
   return (
     <>
-      <Cabecera titulo="Mis pedidos" volver="/cliente" />
+      <Cabecera titulo="Mis servicios" />
       <Pantalla>
         {mios.length === 0 && <p className="text-center text-suave">Aún no tienes pedidos.</p>}
         {mios.map((p) => {
@@ -22,6 +23,7 @@ export default function Historial() {
           );
         })}
       </Pantalla>
+      <MenuInferior rol="cliente" />
     </>
   );
 }

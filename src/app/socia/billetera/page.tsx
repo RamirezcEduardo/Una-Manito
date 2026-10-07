@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
+import { MenuInferior } from "@/components/Menu";
 import { Cabecera, Pantalla } from "@/components/ui";
 import { formatoFecha, gananciaSocia, pagoCliente, parteUnaManito, soles } from "@/lib/config";
 import { useDatos } from "@/lib/store";
@@ -31,7 +32,7 @@ export default function Billetera() {
 
   return (
     <>
-      <Cabecera titulo="Mi billetera" volver="/socia" />
+      <Cabecera titulo="Mi billetera" />
       <Pantalla>
         <div className="grid grid-cols-3 gap-2">
           {PERIODOS.map((p) => (
@@ -82,6 +83,7 @@ export default function Billetera() {
           </Link>
         ))}
       </Pantalla>
+      <MenuInferior rol="socia" />
     </>
   );
 }

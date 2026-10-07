@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 import { BotonWhatsApp } from "@/components/Extras";
+import { MenuInferior } from "@/components/Menu";
 import { Avatar, Cabecera, EstadoBadge, Pantalla, accion } from "@/components/ui";
 import { enHorario, ESLOGAN_SOCIA, formatoFecha, gananciaSocia, nivelSocia, parteUnaManito, soles } from "@/lib/config";
 import { prepararSonido, useAvisoPedidosNuevos, usePermisoAvisos } from "@/lib/avisos";
@@ -109,6 +110,7 @@ export default function PanelSocia() {
         })}
       </Pantalla>
       <BotonWhatsApp mensaje="Hola Una Manito, soy socia y necesito ayuda." />
+      <MenuInferior rol="socia" />
     </>
   );
 }
