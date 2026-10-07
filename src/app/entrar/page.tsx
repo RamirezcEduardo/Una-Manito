@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { Cabecera, Pantalla, mensajeError } from "@/components/ui";
+import { Cabecera, Pantalla, bloquearBotones, hayAccionEnCurso, mensajeError } from "@/components/ui";
 import { esEquipo, rutaDeRol } from "@/lib/api";
 import { useDatos } from "@/lib/store";
 
@@ -37,9 +37,12 @@ function Formulario() {
   }, [listo, sinPerfil, sesion, rol, router, otraCuenta]);
 
   const correr = async (f: () => Promise<void>) => {
+    if (hayAccionEnCurso()) return; // un solo envío por toque
+    bloquearBotones(true);
     setCargando(true); setError(""); setAviso("");
     try { await f(); } catch (e) { setError(mensajeError(e)); }
     setCargando(false);
+    bloquearBotones(false);
   };
   const cambiar = (m: Modo) => { setModo(m); setError(""); setAviso(""); setCodigoEnviado(false); setCodigo(""); };
   const correoValido = email.includes("@") && email.includes(".");

@@ -26,3 +26,17 @@ end $$;
 revoke execute on function public.pedidos_sin_duplicados() from public, anon, authenticated;
 drop trigger if exists pedidos_sin_duplicados on public.pedidos;
 create trigger pedidos_sin_duplicados before insert on public.pedidos for each row execute function public.pedidos_sin_duplicados();
+
+-- Avanzar sin saltarse pasos por doble toque: la app envía el estado que ve la socia.
+create or replace function public.avanzar_pedido(p_pedido uuid, p_desde public.estado_pedido) returns public.estado_pedido
+language plpgsql security definer set search_path = public as $$
+declare actual estado_pedido;
+begin
+  -- "for update": si llegan dos toques a la vez, el segundo espera y luego ve el estado ya cambiado.
+  select estado into actual from pedidos where id = p_pedido and socia_id = auth.uid() for update;
+  if not found then raise exception 'Pedido no encontrado'; end if;
+  if actual <> p_desde then return actual; end if;
+  return public.avanzar_pedido(p_pedido);
+end $$;
+revoke execute on function public.avanzar_pedido(uuid, public.estado_pedido) from public, anon;
+grant execute on function public.avanzar_pedido(uuid, public.estado_pedido) to authenticated;

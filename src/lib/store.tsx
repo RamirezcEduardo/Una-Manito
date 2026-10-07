@@ -172,9 +172,11 @@ function DemoProvider({ children }: { children: ReactNode }) {
       modPedido(pedidoId, (p) => (p.estado === "buscando" ? { ...p, estado: "aceptado", sociaId: d.sesion!.id } : p));
       return true;
     },
-    avanzarPedido: async (id) => mod((x) => {
+    avanzarPedido: async (id) => {
+      const desde = d.pedidos.find((y) => y.id === id)?.estado;
+      mod((x) => {
       const p = x.pedidos.find((y) => y.id === id);
-      if (!p) return x;
+      if (!p || p.estado !== desde) return x; // toque repetido: no avanza dos pasos
       const estado = SIGUIENTE[p.estado] ?? p.estado;
       const pedidos = x.pedidos.map((y) => (y.id === id ? { ...y, estado } : y));
       // Plan recurrente: al terminar, se agenda la siguiente visita con la misma socia.
@@ -184,7 +186,8 @@ function DemoProvider({ children }: { children: ReactNode }) {
           pago: { estado: "pendiente" }, calificacionSocia: undefined, calificacionCliente: undefined, cargoServicio: x.config.cargoServicio, creadoEn: new Date().toISOString() });
       }
       return { ...x, pedidos };
-    }),
+      });
+    },
     cancelarPedido: async (id, motivo) => modPedido(id, (p) => ({ ...p, estado: "cancelado", motivoCancelacion: motivo })),
     marcarPagado: async (id, metodo, propina = 0) => modPedido(id, (p) => ({ ...p, propina, pago: { metodo, estado: "marcado_pagado" } })),
     confirmarPago: async (id) => modPedido(id, (p) => ({ ...p, pago: { ...p.pago, estado: "confirmado" } })),

@@ -65,3 +65,11 @@ body {
   .estado-ciclo { animation: none; }
   .estado-ciclo:first-child { opacity: 1; }
 }
+
+/* Mientras se procesa una acción, los botones no responden (evita dobles envíos). */
+body[data-ocupado] button,
+body[data-ocupado] .btn-primario,
+body[data-ocupado] .btn-acento {
+  pointer-events: none;
+  opacity: 0.6;
+}

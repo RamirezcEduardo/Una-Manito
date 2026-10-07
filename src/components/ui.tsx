@@ -13,9 +13,25 @@ import { useDatos } from "@/lib/store";
 let accionEnCurso = false;
 export async function accion(f: () => Promise<unknown>) {
   if (accionEnCurso) return;
-  accionEnCurso = true;
-  try { await f(); } catch (e) { alert(mensajeError(e)); } finally { accionEnCurso = false; }
+  bloquearBotones(true);
+  try { await f(); } catch (e) { alert(mensajeError(e)); } finally { bloquearBotones(false); }
 }
+
+/**
+ * Mientras una acción está en curso, todos los botones de la pantalla quedan inactivos (se ven atenuados).
+ * Al terminar se espera un momento antes de liberarlos, para que un toque doble no repita la acción.
+ */
+let liberar: ReturnType<typeof setTimeout> | undefined;
+export function bloquearBotones(activo: boolean) {
+  clearTimeout(liberar);
+  if (activo) {
+    accionEnCurso = true;
+    document.body.dataset.ocupado = "1";
+  } else {
+    liberar = setTimeout(() => { accionEnCurso = false; delete document.body.dataset.ocupado; }, 800);
+  }
+}
+export const hayAccionEnCurso = () => accionEnCurso;
 
 export function mensajeError(e: unknown) {
   const m = e instanceof Error ? e.message : "";
@@ -109,13 +125,14 @@ export function Estrellas({ valor, onChange, tam = "text-3xl" }: { valor: number
 
 export function FormCalificar({ titulo, onEnviar }: { titulo: string; onEnviar: (c: Calificacion) => void }) {
   const [estrellas, setEstrellas] = useState(0);
+  const [enviado, setEnviado] = useState(false);
   const [comentario, setComentario] = useState("");
   return (
     <div className="tarjeta space-y-3">
       <h3 className="text-lg font-bold">{titulo}</h3>
       <Estrellas valor={estrellas} onChange={setEstrellas} tam="text-4xl" />
       <textarea className="campo" rows={2} placeholder="Comentario (opcional)" value={comentario} onChange={(e) => setComentario(e.target.value)} />
-      <button className="btn-acento" disabled={!estrellas} onClick={() => onEnviar({ estrellas, comentario })}>Enviar calificación</button>
+      <button className="btn-acento" disabled={!estrellas || enviado} onClick={() => { if (enviado) return; setEnviado(true); onEnviar({ estrellas, comentario }); }}>{enviado ? "Enviando…" : "Enviar calificación"}</button>
     </div>
   );
 }

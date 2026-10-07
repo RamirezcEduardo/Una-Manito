@@ -253,7 +253,8 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       return data!.id as string;
     },
     aceptarPedido: async (id) => Boolean(await rpc("aceptar_pedido", { p_pedido: id })),
-    avanzarPedido: async (id) => { await rpc("avanzar_pedido", { p_pedido: id }); },
+    // Se envía el estado que ve la socia: si llega un toque repetido, la base no avanza dos pasos.
+    avanzarPedido: async (id) => { await rpc("avanzar_pedido", { p_pedido: id, p_desde: d.pedidos.find((p) => p.id === id)?.estado ?? "aceptado" }); },
     cancelarPedido: async (id, motivo) => { await rpc("cancelar_pedido", { p_pedido: id, p_motivo: motivo ?? null }); },
     marcarPagado: async (id, metodo, propina = 0) => { await rpc("marcar_pagado", { p_pedido: id, p_metodo: metodo, p_propina: propina }); },
     confirmarPago: async (id) => { await rpc("confirmar_pago", { p_pedido: id }); },
