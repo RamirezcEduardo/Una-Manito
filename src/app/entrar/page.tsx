@@ -74,15 +74,6 @@ function Formulario() {
   return (
     <Pantalla>
       {rol === "socia" && <p className="text-center font-semibold text-marca-oscuro">🧹 Acceso para socias</p>}
-      {(modo === "entrar" || modo === "crear") && (
-        <div className="grid grid-cols-2 gap-1 rounded-2xl bg-white p-1 ring-1 ring-black/5">
-          {(["entrar", "crear"] as const).map((m) => (
-            <button key={m} onClick={() => cambiar(m)} className={`rounded-xl py-2.5 font-bold ${modo === m ? "bg-marca text-white" : "text-suave"}`}>
-              {m === "entrar" ? "Ya tengo cuenta" : "Crear cuenta"}
-            </button>
-          ))}
-        </div>
-      )}
 
       <div className="tarjeta space-y-4">
         {modo === "entrar" && (
@@ -147,7 +138,7 @@ function Formulario() {
         {error && <p className="rounded-xl bg-red-50 p-3 text-red-700">{error}</p>}
       </div>
 
-      {modo !== "codigo" && (
+      {modo === "entrar" && (
         <button className="w-full text-center font-semibold text-suave underline" onClick={() => cambiar("codigo")}>Prefiero entrar con un código al correo</button>
       )}
       <p className="text-center text-sm text-suave">Al continuar aceptas los <Link href="/terminos" className="underline">Términos</Link> y la <Link href="/privacidad" className="underline">Privacidad</Link>.</p>
@@ -155,6 +146,11 @@ function Formulario() {
   );
 }
 
+function Titulo() {
+  const crear = useSearchParams().get("modo") === "crear";
+  return <Cabecera titulo={crear ? "Crear cuenta" : "Iniciar sesión"} volver="/" />;
+}
+
 export default function Entrar() {
-  return (<><Cabecera titulo="Entrar" volver="/" /><Suspense><Formulario /></Suspense></>);
+  return (<Suspense><Titulo /><Formulario /></Suspense>);
 }
