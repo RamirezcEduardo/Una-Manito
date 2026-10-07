@@ -224,6 +224,13 @@ function DemoProvider({ children }: { children: ReactNode }) {
       if (respuesta.trim().length < 5) throw new Error("Escribe una respuesta");
       mod((x) => ({ ...x, reclamaciones: x.reclamaciones.map((r) => (r.id === id ? { ...r, respuesta: respuesta.trim(), respondidoEn: new Date().toISOString() } : r)) }));
     },
+    cambiarFoto: async (archivo) => {
+      const foto = URL.createObjectURL(archivo);
+      mod((x) => ({ ...x,
+        clientes: x.clientes.map((c) => (c.id === x.sesion?.id ? { ...c, foto } : c)),
+        usuarios: x.usuarios.map((u) => (u.id === x.sesion?.id ? { ...u, foto } : u)),
+        socias: x.socias.map((s) => (s.id === x.sesion?.id ? { ...s, foto } : s)) }));
+    },
     reiniciar: () => setD(SEMILLA),
   };
 

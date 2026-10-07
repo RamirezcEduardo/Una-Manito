@@ -6,9 +6,15 @@ import { ETIQUETA_ESTADO, nivelSocia } from "@/lib/config";
 import type { Calificacion, EstadoPedido } from "@/lib/tipos";
 import { useDatos } from "@/lib/store";
 
-/** Ejecuta una acción y muestra el error en palabras simples si falla. */
+/**
+ * Ejecuta una acción y muestra el error en palabras simples si falla.
+ * Ignora toques repetidos mientras la acción anterior sigue en curso (evita pedidos o pagos duplicados).
+ */
+let accionEnCurso = false;
 export async function accion(f: () => Promise<unknown>) {
-  try { await f(); } catch (e) { alert(mensajeError(e)); }
+  if (accionEnCurso) return;
+  accionEnCurso = true;
+  try { await f(); } catch (e) { alert(mensajeError(e)); } finally { accionEnCurso = false; }
 }
 
 export function mensajeError(e: unknown) {

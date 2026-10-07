@@ -10,7 +10,7 @@ export interface Sesion { rol: Rol; id: string }
 export const esEquipo = (rol?: Rol) => rol === "admin" || rol === "ceo";
 export const rutaDeRol = (rol: Rol) => (esEquipo(rol) ? "/admin" : `/${rol}`);
 
-export interface Usuario { id: string; nombre: string; telefono: string; email?: string; rol: Rol; creadoEn?: string; personal?: DatosPersonales }
+export interface Usuario { id: string; nombre: string; telefono: string; email?: string; rol: Rol; creadoEn?: string; personal?: DatosPersonales; foto?: string }
 export interface Invitacion { email: string; nombre?: string; rol: "admin" | "ceo"; creadoEn: string }
 
 export interface Datos {
@@ -84,6 +84,8 @@ export interface Api extends Datos {
   /** Cualquiera (con o sin cuenta). Devuelve el número correlativo. */
   registrarReclamo: (r: NuevaReclamacion) => Promise<number>;
   responderReclamo: (id: string, respuesta: string) => Promise<void>;
+  /** Sube y guarda la foto de perfil del usuario actual (si es socia, también es la que ven los clientes). */
+  cambiarFoto: (archivo: File) => Promise<void>;
   reiniciar: () => void; // solo demo
 }
 

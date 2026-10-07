@@ -85,13 +85,27 @@ function Formulario() {
       { enableHighAccuracy: true, timeout: 10000 },
     );
 
-  const enviar = () => accion(async () => {
-    const id = await crearPedido({
-      servicio: servicio.id, ubicacion: { direccion: [direccion.trim(), interior.trim()].filter(Boolean).join(", "), distrito, referencia, ...pos },
-      fecha: fechaPedido, horas, conMateriales, notas, tareas, recargo: precio.recargo, descuento: precio.descuento, frecuencia, total,
+  // Un solo envío: se bloquea al primer toque y solo se libera si hubo error.
+  const [enviando, setEnviando] = useState(false);
+  const bloqueo = useRef(false);
+  const enviar = () => {
+    if (bloqueo.current) return;
+    bloqueo.current = true;
+    setEnviando(true);
+    accion(async () => {
+      try {
+        const id = await crearPedido({
+          servicio: servicio.id, ubicacion: { direccion: [direccion.trim(), interior.trim()].filter(Boolean).join(", "), distrito, referencia, ...pos },
+          fecha: fechaPedido, horas, conMateriales, notas, tareas, recargo: precio.recargo, descuento: precio.descuento, frecuencia, total,
+        });
+        router.replace(`/cliente/pedido/${id}`);
+      } catch (e) {
+        bloqueo.current = false;
+        setEnviando(false);
+        throw e;
+      }
     });
-    router.push(`/cliente/pedido/${id}`);
-  });
+  };
 
   return (
     <Pantalla>
@@ -205,7 +219,7 @@ function Formulario() {
               <div className="flex justify-between text-lg"><span>Total estimado</span><b>{soles(precio.aPagar)}</b></div>
             </div>
             <p className="text-sm text-suave">Pagas al final por Yape, Plin o efectivo. Si quieres, puedes dejar una propina: va completa a tu socia.</p>
-            <button className="btn-primario" onClick={enviar}>Confirmar y buscar socia</button>
+            <button className="btn-primario" disabled={enviando} onClick={enviar}>{enviando ? "Enviando…" : "Confirmar y buscar socia"}</button>
           </div>
         </div>
       )}

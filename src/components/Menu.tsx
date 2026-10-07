@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { EnlaceReclamaciones } from "@/components/Extras";
-import { accion } from "@/components/ui";
+import { Avatar, accion } from "@/components/ui";
 import { useDatos } from "@/lib/store";
 
 const OPCIONES = {
@@ -43,13 +43,15 @@ export function MenuInferior({ rol }: { rol: "cliente" | "socia" }) {
 
 /** Datos de la cuenta, cambio de contraseña y salida. */
 export function PerfilVista({ rol }: { rol: "cliente" | "socia" }) {
-  const { sesion, usuarios, clientes, socias, salir, cambiarContrasena, demo } = useDatos();
+  const { sesion, usuarios, clientes, socias, salir, cambiarContrasena, cambiarFoto, demo } = useDatos();
   const router = useRouter();
   const [nueva, setNueva] = useState("");
   const [abierto, setAbierto] = useState(false);
   const u = usuarios.find((x) => x.id === sesion?.id);
   const base = rol === "socia" ? socias.find((s) => s.id === sesion?.id) : clientes.find((c) => c.id === sesion?.id);
   const nombre = u?.nombre ?? base?.nombre ?? "";
+  const foto = (rol === "socia" ? socias.find((s) => s.id === sesion?.id)?.foto : undefined) || u?.foto || clientes.find((c) => c.id === sesion?.id)?.foto;
+  const [subiendo, setSubiendo] = useState(false);
   const filas: [string, string | undefined][] = [
     ["Nombre", nombre],
     ["Celular", u?.telefono ?? base?.telefono],
@@ -60,9 +62,13 @@ export function PerfilVista({ rol }: { rol: "cliente" | "socia" }) {
   return (
     <>
       <div className="tarjeta space-y-1 text-center">
-        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-marca text-3xl font-extrabold text-white">
-          {nombre.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]).join("").toUpperCase() || "👤"}
-        </div>
+        <label className="relative mx-auto block w-fit cursor-pointer" title="Cambiar foto">
+          <Avatar foto={foto} nombre={nombre || "?"} tam={96} />
+          <span className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full bg-acento text-lg shadow ring-2 ring-white">{subiendo ? "⏳" : "📷"}</span>
+          <input type="file" accept="image/*" className="hidden" disabled={subiendo}
+            onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (!f) return; setSubiendo(true); accion(() => cambiarFoto(f)).finally(() => setSubiendo(false)); }} />
+        </label>
+        <p className="text-sm font-semibold text-marca">{foto ? "Toca la foto para cambiarla" : "Toca para agregar tu foto"}</p>
         <p className="pt-2 text-xl font-extrabold">{nombre}</p>
         <p className="text-suave">{rol === "socia" ? "Socia de Una Manito" : "Cliente"}</p>
       </div>

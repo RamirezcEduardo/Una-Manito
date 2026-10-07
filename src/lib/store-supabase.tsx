@@ -118,8 +118,8 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     setD({
       config,
       sesion: yo ? { rol: yo.rol, id: yo.id } : null,
-      clientes: ps.map((p: any) => ({ id: p.id, nombre: p.nombre, telefono: p.telefono, email: p.email ?? undefined })),
-      usuarios: ps.map((p: any) => ({ id: p.id, nombre: p.nombre, telefono: p.telefono, email: p.email ?? undefined, rol: p.rol, creadoEn: p.creado_en, personal: personal(p.id) })),
+      clientes: ps.map((p: any) => ({ id: p.id, nombre: p.nombre, telefono: p.telefono, email: p.email ?? undefined, foto: p.foto_url ?? undefined })),
+      usuarios: ps.map((p: any) => ({ id: p.id, nombre: p.nombre, telefono: p.telefono, email: p.email ?? undefined, rol: p.rol, creadoEn: p.creado_en, personal: personal(p.id), foto: p.foto_url ?? undefined })),
       invitaciones: (invitaciones.data ?? []).map((i: any) => ({ email: i.email, nombre: i.nombre ?? undefined, rol: i.rol, creadoEn: i.creado_en })),
       socias: (socias.data ?? []).map((s: any) => {
         const p = ps.find((x: any) => x.id === s.id);
@@ -289,6 +289,14 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       return Number(data);
     },
     responderReclamo: async (id, respuesta) => { await rpc("responder_reclamo", { p_id: id, p_respuesta: respuesta }); },
+    cambiarFoto: async (archivo) => {
+      if (!archivo.type.startsWith("image/")) throw new Error("Elige una imagen");
+      if (archivo.size > 5 * 1024 * 1024) throw new Error("La foto debe pesar menos de 5 MB");
+      const ruta = `${uidRef.current}/perfil-${Date.now()}.${archivo.name.split(".").pop() || "jpg"}`;
+      const { error } = await sb.storage.from("fotos").upload(ruta, archivo);
+      falla(error);
+      await rpc("set_mi_foto", { p_url: sb.storage.from("fotos").getPublicUrl(ruta).data.publicUrl });
+    },
     reiniciar: () => {},
   };
 

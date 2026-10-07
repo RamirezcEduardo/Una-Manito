@@ -57,7 +57,7 @@ export interface Pedido {
 
 export interface Calificacion { estrellas: number; comentario?: string }
 
-export interface Cliente { id: string; nombre: string; telefono: string; email?: string }
+export interface Cliente { id: string; nombre: string; telefono: string; email?: string; foto?: string }
 
 /** Datos personales privados (solo la persona y el equipo los ven). */
 export interface DatosPersonales {
