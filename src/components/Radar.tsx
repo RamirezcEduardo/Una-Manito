@@ -1,8 +1,11 @@
 "use client";
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { Avatar } from "@/components/ui";
 import { formatoFecha, gananciaSocia, soles } from "@/lib/config";
 import type { Pedido, Servicio, Socia } from "@/lib/tipos";
+
+const MapaRadar = dynamic(() => import("./MapaRadar"), { ssr: false, loading: () => <div className="h-[340px] animate-pulse bg-[#0a4fc8]" /> });
 
 // Posición estable en el radar para cada distrito (no es un mapa real: es una vista llamativa de "dónde busco").
 const posicion = (nombre: string, i: number, total: number) => {
@@ -50,6 +53,25 @@ export function RadarEspera({ socia, pedidos }: { socia: Socia; pedidos: Pedido[
       <p className="text-center text-sm text-white/70">
         {socia.distritos.length} distrito{socia.distritos.length === 1 ? "" : "s"} · {Object.keys(socia.horario ?? {}).length ? "dentro de tu horario" : "cualquier día y hora"}
       </p>
+    </div>
+  );
+}
+
+/** Mapa real de Lima con radar sobre la socia y los pedidos cercanos marcados con lo que gana. */
+export function MapaEspera({ socia, pedidos, onElegir }: { socia: Socia; pedidos: Pedido[]; onElegir: (p: Pedido) => void }) {
+  return (
+    <div className="relative overflow-hidden rounded-3xl shadow-lg ring-1 ring-black/10">
+      <MapaRadar pedidos={pedidos} onElegir={onElegir} />
+      <p className="absolute right-2 top-2 z-[500] rounded bg-white/80 px-1.5 text-[10px] text-suave">© OpenStreetMap · CARTO</p>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[500] bg-gradient-to-t from-[#0b1f44]/90 via-[#0b1f44]/60 to-transparent px-4 pb-6 pt-10 text-white">
+        <p className="text-lg font-extrabold">
+          {pedidos.length > 0 ? `🔔 ${pedidos.length} pedido${pedidos.length === 1 ? "" : "s"} cerca de ti` : "📡 Buscando pedidos cerca de ti…"}
+        </p>
+        <p className="text-sm text-white/80">
+          {socia.distritos.length} distrito{socia.distritos.length === 1 ? "" : "s"} · {Object.keys(socia.horario ?? {}).length ? "dentro de tu horario" : "cualquier día y hora"}
+          {pedidos.length > 0 && " · toca un globo para verlo"}
+        </p>
+      </div>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 import { BotonWhatsApp } from "@/components/Extras";
 import { MenuInferior } from "@/components/Menu";
-import { AlertaPedido, RadarEspera } from "@/components/Radar";
+import { AlertaPedido, MapaEspera } from "@/components/Radar";
 import { Avatar, Cabecera, EstadoBadge, Pantalla, accion } from "@/components/ui";
 import { enHorario, ESLOGAN_SOCIA, formatoFecha, gananciaSocia, nivelSocia, soles } from "@/lib/config";
 import { prepararSonido, useAvisoPedidosNuevos, usePermisoAvisos } from "@/lib/avisos";
@@ -21,8 +21,9 @@ export default function PanelSocia() {
   const { permiso, pedir } = usePermisoAvisos();
   // Alerta grande: el pedido más reciente que la socia aún no descartó.
   const [descartados, setDescartados] = useState<string[]>([]);
-  const alerta = disponible ? cercanos.find((p) => !descartados.includes(p.id)) : undefined;
-  const descartar = useCallback(() => { if (alerta) setDescartados((d) => [...d, alerta.id]); }, [alerta]);
+  const [elegido, setElegido] = useState<string | null>(null); // pedido tocado en el mapa
+  const alerta = disponible ? (cercanos.find((p) => p.id === elegido) ?? cercanos.find((p) => !descartados.includes(p.id))) : undefined;
+  const descartar = useCallback(() => { if (alerta) setDescartados((d) => [...d, alerta.id]); setElegido(null); }, [alerta]);
   const aceptar = (id: string) => accion(async () => { if (await aceptarPedido(id)) router.push(`/socia/pedido/${id}`); else { alert("Otra socia ya tomó este pedido."); setDescartados((d) => [...d, id]); } });
   if (!listo) return null;
   if (!yo) return (<><Cabecera titulo="Socia" /><Pantalla><Link href="/" className="btn-primario block text-center">Ir al inicio</Link></Pantalla></>);
@@ -58,7 +59,7 @@ export default function PanelSocia() {
           className={`btn py-6 text-xl ${yo.disponible ? "bg-green-500 text-white" : "bg-gray-200 text-tinta"}`}>
           {yo.disponible ? "🟢 Estoy disponible" : "⚪ No disponible — tocar para activar"}
         </button>
-        {yo.disponible && <RadarEspera socia={yo} pedidos={cercanos} />}
+        {yo.disponible && <MapaEspera socia={yo} pedidos={cercanos} onElegir={(p) => setElegido(p.id)} />}
         {yo.disponible && permiso === "default" && (
           <button onClick={pedir} className="btn border-2 border-acento bg-acento-claro text-tinta">🔔 Activar avisos de pedidos nuevos</button>
         )}
