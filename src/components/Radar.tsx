@@ -1,0 +1,92 @@
+"use client";
+import { useEffect, useState } from "react";
+import { Avatar } from "@/components/ui";
+import { formatoFecha, gananciaSocia, soles } from "@/lib/config";
+import type { Pedido, Servicio, Socia } from "@/lib/tipos";
+
+// Posición estable en el radar para cada distrito (no es un mapa real: es una vista llamativa de "dónde busco").
+const posicion = (nombre: string, i: number, total: number) => {
+  const h = [...nombre].reduce((a, c) => a + c.charCodeAt(0), 0);
+  const angulo = (i / Math.max(total, 1)) * 2 * Math.PI + (h % 60) / 60;
+  const radio = 28 + (h % 14);
+  return { left: `${50 + radio * Math.cos(angulo)}%`, top: `${50 + radio * Math.sin(angulo)}%` };
+};
+
+/** Radar animado mientras la socia está disponible: sus distritos y los pedidos que aparecen. */
+export function RadarEspera({ socia, pedidos }: { socia: Socia; pedidos: Pedido[] }) {
+  const distritos = socia.distritos.slice(0, 8);
+  const conPedido = new Set(pedidos.map((p) => p.ubicacion.distrito));
+  return (
+    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-[#0a4fc8] to-[#0b1f44] p-4 text-white shadow-lg">
+      <div className="relative mx-auto aspect-square w-full max-w-[320px]">
+        {/* anillos */}
+        {[1, 0.72, 0.44].map((t) => (
+          <div key={t} className="absolute rounded-full border border-white/15" style={{ inset: `${(1 - t) * 50}%` }} />
+        ))}
+        {/* ondas */}
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="radar-onda absolute inset-0 rounded-full border-2 border-[#4da3ff]" style={{ animationDelay: `${i}s` }} />
+        ))}
+        {/* barrido */}
+        <div className="radar-barrido absolute inset-0 rounded-full" style={{ background: "conic-gradient(from 0deg, rgba(77,163,255,0.45), rgba(77,163,255,0) 70deg)" }} />
+        {/* distritos */}
+        {distritos.map((d, i) => {
+          const hay = conPedido.has(d);
+          return (
+            <div key={d} className="absolute -translate-x-1/2 -translate-y-1/2 text-center" style={posicion(d, i, distritos.length)}>
+              <span className={`mx-auto block rounded-full ${hay ? "radar-punto h-5 w-5 bg-acento ring-4 ring-acento/40" : "h-2.5 w-2.5 bg-white/70"}`} />
+              <span className={`mt-1 block whitespace-nowrap text-[11px] font-semibold ${hay ? "text-acento" : "text-white/70"}`}>{d}</span>
+            </div>
+          );
+        })}
+        {/* la socia al centro */}
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full ring-4 ring-white">
+          <Avatar foto={socia.foto} nombre={socia.nombre} tam={64} />
+        </div>
+      </div>
+      <p className="mt-2 text-center text-lg font-extrabold">
+        {pedidos.length > 0 ? `🔔 ${pedidos.length} pedido${pedidos.length === 1 ? "" : "s"} cerca de ti` : "Buscando pedidos cerca de ti…"}
+      </p>
+      <p className="text-center text-sm text-white/70">
+        {socia.distritos.length} distrito{socia.distritos.length === 1 ? "" : "s"} · {Object.keys(socia.horario ?? {}).length ? "dentro de tu horario" : "cualquier día y hora"}
+      </p>
+    </div>
+  );
+}
+
+const SEGUNDOS = 45;
+
+/** Alerta grande de pedido nuevo, con cuenta regresiva. */
+export function AlertaPedido({ pedido, servicio, onAceptar, onCerrar }: { pedido: Pedido; servicio?: Servicio; onAceptar: () => void; onCerrar: () => void }) {
+  const [quedan, setQuedan] = useState(SEGUNDOS);
+  useEffect(() => {
+    navigator.vibrate?.([300, 150, 300]);
+    const t = setInterval(() => setQuedan((s) => s - 1), 1000);
+    return () => clearInterval(t);
+  }, [pedido.id]);
+  useEffect(() => { if (quedan <= 0) onCerrar(); }, [quedan, onCerrar]);
+  return (
+    <div className="fixed inset-0 z-[3000] flex items-end bg-[#0b1f44]/70 backdrop-blur-sm sm:items-center">
+      <div className="alerta-subir mx-auto w-full max-w-md overflow-hidden rounded-t-3xl bg-white sm:rounded-3xl">
+        <div className="bg-acento px-5 py-3 text-center">
+          <p className="text-sm font-bold uppercase tracking-wide text-tinta/70">¡Nuevo pedido!</p>
+          <p className="text-4xl font-black text-tinta">{soles(gananciaSocia(pedido))}</p>
+          <p className="text-sm font-semibold text-tinta/80">es lo que tú ganas</p>
+        </div>
+        <div className="space-y-2 p-5">
+          <p className="text-xl font-extrabold">{servicio?.icono} {servicio?.nombre ?? "Servicio"}</p>
+          <p className="text-lg">📍 <b>{pedido.ubicacion.distrito}</b></p>
+          <p>🕒 {formatoFecha(pedido.fecha)} · ⏱️ {pedido.horas} h</p>
+          <p>🧴 {pedido.conMateriales ? "Llevas tus materiales" : "Materiales del cliente"}</p>
+          {pedido.recargo > 0 && <p className="inline-block rounded-full bg-green-100 px-3 py-1 text-sm font-bold text-green-800">💰 Incluye pago extra</p>}
+          {pedido.frecuencia !== "unica" && <p className="inline-block rounded-full bg-green-100 px-3 py-1 text-sm font-bold text-green-800">🔁 Cliente fijo</p>}
+          <button className="alerta-latido btn-acento mt-2 py-5 text-xl" onClick={onAceptar}>Aceptar pedido</button>
+          <div className="h-2 overflow-hidden rounded-full bg-gray-100">
+            <div className="h-full bg-acento transition-all duration-1000 ease-linear" style={{ width: `${(quedan / SEGUNDOS) * 100}%` }} />
+          </div>
+          <button className="w-full py-2 font-semibold text-suave" onClick={onCerrar}>Ahora no ({quedan} s)</button>
+        </div>
+      </div>
+    </div>
+  );
+}

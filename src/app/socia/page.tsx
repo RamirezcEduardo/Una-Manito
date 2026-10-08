@@ -1,11 +1,12 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { BotonWhatsApp } from "@/components/Extras";
 import { MenuInferior } from "@/components/Menu";
+import { AlertaPedido, RadarEspera } from "@/components/Radar";
 import { Avatar, Cabecera, EstadoBadge, Pantalla, accion } from "@/components/ui";
-import { enHorario, ESLOGAN_SOCIA, formatoFecha, gananciaSocia, nivelSocia, parteUnaManito, soles } from "@/lib/config";
+import { enHorario, ESLOGAN_SOCIA, formatoFecha, gananciaSocia, nivelSocia, soles } from "@/lib/config";
 import { prepararSonido, useAvisoPedidosNuevos, usePermisoAvisos } from "@/lib/avisos";
 import { useDatos } from "@/lib/store";
 
@@ -18,6 +19,11 @@ export default function PanelSocia() {
   const disponible = !!yo && yo.estado === "aprobada" && yo.disponible;
   useAvisoPedidosNuevos(paraAviso, disponible);
   const { permiso, pedir } = usePermisoAvisos();
+  // Alerta grande: el pedido más reciente que la socia aún no descartó.
+  const [descartados, setDescartados] = useState<string[]>([]);
+  const alerta = disponible ? cercanos.find((p) => !descartados.includes(p.id)) : undefined;
+  const descartar = useCallback(() => { if (alerta) setDescartados((d) => [...d, alerta.id]); }, [alerta]);
+  const aceptar = (id: string) => accion(async () => { if (await aceptarPedido(id)) router.push(`/socia/pedido/${id}`); else { alert("Otra socia ya tomó este pedido."); setDescartados((d) => [...d, id]); } });
   if (!listo) return null;
   if (!yo) return (<><Cabecera titulo="Socia" /><Pantalla><Link href="/" className="btn-primario block text-center">Ir al inicio</Link></Pantalla></>);
 
@@ -42,7 +48,6 @@ export default function PanelSocia() {
   const ganancias = terminados.reduce((t, p) => t + gananciaSocia(p), 0);
   const propinas = terminados.reduce((t, p) => t + (p.propina || 0), 0);
   const nivel = nivelSocia(yo);
-  const debes = terminados.filter((p) => p.pago.estado !== "pendiente" && !p.liquidado).reduce((t, p) => t + parteUnaManito(p), 0);
 
   return (
     <>
@@ -53,6 +58,7 @@ export default function PanelSocia() {
           className={`btn py-6 text-xl ${yo.disponible ? "bg-green-500 text-white" : "bg-gray-200 text-tinta"}`}>
           {yo.disponible ? "🟢 Estoy disponible" : "⚪ No disponible — tocar para activar"}
         </button>
+        {yo.disponible && <RadarEspera socia={yo} pedidos={cercanos} />}
         {yo.disponible && permiso === "default" && (
           <button onClick={pedir} className="btn border-2 border-acento bg-acento-claro text-tinta">🔔 Activar avisos de pedidos nuevos</button>
         )}
@@ -79,10 +85,6 @@ export default function PanelSocia() {
           <div className="tarjeta"><p className="text-sm text-suave">Servicios</p><p className="text-2xl font-extrabold">{terminados.length}</p></div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Link href="/socia/billetera" className="tarjeta block text-center font-bold">💰 Mi billetera{debes > 0 && <span className="block text-sm font-normal text-amber-800">Por pasar: {soles(debes)}</span>}</Link>
-          <Link href="/socia/horario" className="tarjeta block text-center font-bold">📅 Mi horario<span className="block text-sm font-normal text-suave">{Object.keys(yo.horario ?? {}).length ? `${Object.keys(yo.horario).length} días` : "Todos los días"}</span></Link>
-        </div>
 
         {activos.map((p) => (
           <Link key={p.id} href={`/socia/pedido/${p.id}`} className="tarjeta block border-l-8 border-marca">
@@ -93,7 +95,7 @@ export default function PanelSocia() {
 
         <h2 className="pt-2 text-lg font-bold">Pedidos cerca de ti</h2>
         {!yo.disponible && <p className="text-suave">Activa “disponible” para ver pedidos.</p>}
-        {yo.disponible && cercanos.length === 0 && <p className="text-suave">No hay pedidos por ahora en tus distritos y horario. Te avisaremos 🔔</p>}
+        {yo.disponible && cercanos.length === 0 && <p className="text-suave">Aún no hay pedidos. Apenas llegue uno, te sale la alerta 🔔</p>}
         {yo.disponible && cercanos.map((p) => {
           const s = config.servicios.find((x) => x.id === p.servicio)!;
           return (
@@ -104,12 +106,13 @@ export default function PanelSocia() {
               {p.frecuencia !== "unica" && <p className="inline-block rounded-full bg-green-100 px-2 py-0.5 text-sm font-bold text-green-800">🔁 Cliente fijo: {p.frecuencia === "semanal" ? "cada semana" : "cada 15 días"}</p>}
               <p className="text-suave">⏱️ {p.horas} h · 🧴 {p.conMateriales ? "Llevas tus materiales" : "Materiales del cliente"}</p>
               {p.tareas.length > 0 && <p className="text-suave">✅ {p.tareas.join(", ")}</p>}
-              <button className="btn-primario" onClick={() => accion(async () => { if (await aceptarPedido(p.id)) router.push(`/socia/pedido/${p.id}`); else alert("Otra socia ya tomó este pedido."); })}>Aceptar pedido</button>
+              <button className="btn-primario" onClick={() => aceptar(p.id)}>Aceptar pedido</button>
             </div>
           );
         })}
       </Pantalla>
       <BotonWhatsApp mensaje="Hola Una Manito, soy socia y necesito ayuda." />
+      {alerta && <AlertaPedido pedido={alerta} servicio={config.servicios.find((x) => x.id === alerta.servicio)} onAceptar={() => aceptar(alerta.id)} onCerrar={descartar} />}
       <MenuInferior rol="socia" />
     </>
   );
