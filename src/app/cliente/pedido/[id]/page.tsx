@@ -1,7 +1,8 @@
 "use client";
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { AgregarCalendario, BotonEmergencia, BotonWhatsApp } from "@/components/Extras";
 import { Mapa } from "@/components/MapaDinamico";
+import { BuscandoSocia, SociaAcepto } from "@/components/Radar";
 import { Avatar, Cabecera, Contactar, EstadoBadge, Estrellas, FormCalificar, NivelBadge, Pantalla, accion } from "@/components/ui";
 import { FRECUENCIAS, formatoFecha, MOTIVOS_CANCELACION, PROPINAS, soles } from "@/lib/config";
 import { useDatos } from "@/lib/store";
@@ -9,6 +10,12 @@ import type { EstadoPedido, MetodoPago } from "@/lib/tipos";
 
 const PASOS: EstadoPedido[] = ["buscando", "aceptado", "en_camino", "en_curso", "terminado"];
 const PASO_TEXTO = ["Buscando", "Aceptado", "En camino", "En curso", "Terminado"];
+const MENSAJE_ETAPA: Partial<Record<EstadoPedido, (nombre: string) => string>> = {
+  aceptado: (n) => `🤝 ${n} aceptó y se está preparando`,
+  en_camino: (n) => `🛵 ${n} va en camino a tu casa`,
+  en_curso: (n) => `✨ ${n} está trabajando en tu casa`,
+  terminado: (n) => `✅ ${n} terminó. ¡Paga y califica!`,
+};
 
 export default function DetallePedido({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -17,6 +24,13 @@ export default function DetallePedido({ params }: { params: Promise<{ id: string
   const [cancelando, setCancelando] = useState(false);
   const [paciencia, setPaciencia] = useState(false); // "Seguir esperando"
   const minutosBuscando = useMinutosDesde(p?.estado === "buscando" ? p.creadoEn : undefined);
+  // Celebración: solo cuando el pedido pasa de "buscando" a "aceptado" con la pantalla abierta.
+  const estadoAnterior = useRef(p?.estado);
+  const [celebrar, setCelebrar] = useState(false);
+  useEffect(() => {
+    if (estadoAnterior.current === "buscando" && p?.estado === "aceptado") setCelebrar(true);
+    estadoAnterior.current = p?.estado;
+  }, [p?.estado]);
   if (!listo) return null;
   if (!p) return (<><Cabecera titulo="Pedido" volver="/cliente" /><Pantalla><p>No encontramos este pedido.</p></Pantalla></>);
   const socia = socias.find((s) => s.id === p.sociaId);
@@ -37,9 +51,11 @@ export default function DetallePedido({ params }: { params: Promise<{ id: string
               ))}
             </ol>
           )}
-          {p.estado === "buscando" && <p className="animate-pulse text-center text-suave">Estamos avisando a las socias cercanas…</p>}
+          {socia && MENSAJE_ETAPA[p.estado] && <p className="rounded-2xl bg-marca-claro p-3 text-center text-lg font-bold text-marca-oscuro">{MENSAJE_ETAPA[p.estado]!(socia.nombre.split(" ")[0])}</p>}
           {p.estado === "cancelado" && p.motivoCancelacion && <p className="text-center text-suave">Motivo: {p.motivoCancelacion}</p>}
         </div>
+
+        {p.estado === "buscando" && <BuscandoSocia pedido={p} disponibles={socias.filter((s) => s.estado === "aprobada" && s.disponible && s.distritos.includes(p.ubicacion.distrito) && s.servicios.includes(p.servicio)).length} />}
 
         {p.estado === "buscando" && minutosBuscando >= 20 && !paciencia && (
           <div className="tarjeta space-y-3 border-2 border-acento">
@@ -67,7 +83,7 @@ export default function DetallePedido({ params }: { params: Promise<{ id: string
         )}
 
         <div className="tarjeta space-y-2">
-          <Mapa lat={p.ubicacion.lat} lng={p.ubicacion.lng} alto={160} />
+          {p.estado !== "buscando" && <Mapa lat={p.ubicacion.lat} lng={p.ubicacion.lng} alto={160} />}
           <p>📍 {p.ubicacion.direccion}, {p.ubicacion.distrito}</p>
           <p>🕒 {formatoFecha(p.fecha)} · {p.horas} h</p>
           <p>🧴 {p.conMateriales ? "La socia lleva materiales" : "Materiales de la casa"}</p>
@@ -115,6 +131,7 @@ export default function DetallePedido({ params }: { params: Promise<{ id: string
           </div>
         )}
       </Pantalla>
+      {celebrar && socia && <SociaAcepto socia={socia} onCerrar={() => setCelebrar(false)} />}
       <BotonWhatsApp mensaje={`Hola Una Manito, tengo una consulta sobre mi pedido ${p.id.slice(0, 8)}.`} />
     </>
   );

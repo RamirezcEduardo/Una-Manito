@@ -3,6 +3,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { Avatar } from "@/components/ui";
 import { formatoFecha, gananciaSocia, soles } from "@/lib/config";
+import { NivelBadge } from "@/components/ui";
 import type { Pedido, Servicio, Socia } from "@/lib/tipos";
 
 const MapaRadar = dynamic(() => import("./MapaRadar"), { ssr: false, loading: () => <div className="h-[340px] animate-pulse bg-[#0a4fc8]" /> });
@@ -108,6 +109,44 @@ export function AlertaPedido({ pedido, servicio, onAceptar, onCerrar }: { pedido
           </div>
           <button className="w-full py-2 font-semibold text-suave" onClick={onCerrar}>Ahora no ({quedan} s)</button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** Cliente esperando: mapa con su casa al centro y ondas de búsqueda. */
+export function BuscandoSocia({ pedido, disponibles }: { pedido: Pedido; disponibles: number }) {
+  return (
+    <div className="relative overflow-hidden rounded-3xl shadow-lg ring-1 ring-black/10">
+      <MapaRadar casa={[pedido.ubicacion.lat, pedido.ubicacion.lng]} alto={300} />
+      <p className="absolute right-2 top-2 z-[500] rounded bg-white/80 px-1.5 text-[10px] text-suave">© OpenStreetMap · CARTO</p>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[500] bg-gradient-to-t from-[#0b1f44]/90 via-[#0b1f44]/60 to-transparent px-4 pb-5 pt-10 text-white">
+        <p className="text-xl font-extrabold">🔎 Buscando a tu socia…</p>
+        <p className="text-sm text-white/85">
+          {disponibles > 0 ? `${disponibles} socia${disponibles === 1 ? "" : "s"} disponible${disponibles === 1 ? "" : "s"} en ${pedido.ubicacion.distrito}` : `Estamos avisando a las socias de ${pedido.ubicacion.distrito}`}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** Celebración cuando una socia acepta el pedido del cliente. */
+export function SociaAcepto({ socia, onCerrar }: { socia: Socia; onCerrar: () => void }) {
+  useEffect(() => { navigator.vibrate?.([200, 100, 200]); }, []);
+  const nombre = socia.nombre.split(" ")[0];
+  return (
+    <div className="fixed inset-0 z-[3000] flex items-end bg-[#0b1f44]/70 backdrop-blur-sm sm:items-center" onClick={onCerrar}>
+      <div className="alerta-subir mx-auto w-full max-w-md space-y-3 rounded-t-3xl bg-white p-6 text-center sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+        <div className="text-5xl">🎉</div>
+        <h3 className="text-2xl font-black">¡{nombre} aceptó tu pedido!</h3>
+        <div className="mx-auto w-fit rounded-full ring-4 ring-acento">
+          <Avatar foto={socia.foto} nombre={socia.nombre} tam={110} />
+        </div>
+        <p className="text-xl font-extrabold">{socia.nombre}</p>
+        <div className="flex justify-center"><NivelBadge socia={socia} /></div>
+        <p className="text-suave">⭐ {socia.calificacion > 0 ? socia.calificacion.toFixed(1) : "Nueva"} · {socia.serviciosHechos} servicios hechos</p>
+        <p className="rounded-2xl bg-marca-claro p-3 font-semibold text-marca-oscuro">Te avisaremos cuando vaya en camino. Puedes escribirle desde tu pedido.</p>
+        <button className="btn-primario" onClick={onCerrar}>¡Genial!</button>
       </div>
     </div>
   );

@@ -19,6 +19,19 @@ const iconoSocia = L.divIcon({
   </div>`,
 });
 
+// La casa del cliente (cuando el cliente espera a su socia).
+const iconoCasa = L.divIcon({
+  className: "",
+  iconSize: [160, 160],
+  iconAnchor: [80, 80],
+  html: `<div style="position:relative;width:160px;height:160px">
+    <div class="radar-onda" style="position:absolute;inset:0;border-radius:9999px;border:3px solid #f6a01a"></div>
+    <div class="radar-onda" style="position:absolute;inset:0;border-radius:9999px;border:3px solid #f6a01a;animation-delay:1s"></div>
+    <div class="radar-onda" style="position:absolute;inset:0;border-radius:9999px;border:3px solid #f6a01a;animation-delay:2s"></div>
+    <div style="position:absolute;left:52px;top:52px;width:56px;height:56px;border-radius:9999px;background:#fff;border:4px solid #f6a01a;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 6px 16px rgba(0,0,0,.3)">🏠</div>
+  </div>`,
+});
+
 // Cada pedido: globo naranja con lo que gana la socia.
 const iconoPedido = (monto: string) => L.divIcon({
   className: "",
@@ -48,19 +61,24 @@ function Encuadre({ puntos }: { puntos: [number, number][] }) {
 }
 
 /** Mapa real de Lima con la ubicación de la socia (si la comparte) y los pedidos cercanos. */
-export default function MapaRadar({ pedidos, onElegir, alto = 340 }: { pedidos: Pedido[]; onElegir: (p: Pedido) => void; alto?: number }) {
+export default function MapaRadar({ pedidos = [], onElegir, alto = 340, casa }: {
+  pedidos?: Pedido[]; onElegir?: (p: Pedido) => void; alto?: number;
+  /** Si se pasa, el centro es la casa del cliente (no se pide la ubicación del dispositivo). */
+  casa?: [number, number];
+}) {
   const [yo, setYo] = useState<[number, number] | null>(null);
   useEffect(() => {
+    if (casa) return;
     navigator.geolocation?.getCurrentPosition((p) => setYo([p.coords.latitude, p.coords.longitude]), () => {}, { timeout: 8000, maximumAge: 60_000 });
-  }, []);
-  const centro: [number, number] = yo ?? [LIMA.lat, LIMA.lng];
+  }, [casa]);
+  const centro: [number, number] = casa ?? yo ?? [LIMA.lat, LIMA.lng];
   const puntos: [number, number][] = [centro, ...pedidos.map((p) => [p.ubicacion.lat, p.ubicacion.lng] as [number, number])];
   return (
     <MapContainer center={centro} zoom={12} zoomControl={false} attributionControl={false} style={{ height: alto, width: "100%" }} scrollWheelZoom={false}>
       <TileLayer attribution='&copy; OpenStreetMap &copy; CARTO' url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
-      <Marker position={centro} icon={iconoSocia} interactive={false} />
+      <Marker position={centro} icon={casa ? iconoCasa : iconoSocia} interactive={false} />
       {pedidos.map((p) => (
-        <Marker key={p.id} position={[p.ubicacion.lat, p.ubicacion.lng]} icon={iconoPedido(soles(gananciaSocia(p)))} eventHandlers={{ click: () => onElegir(p) }} />
+        <Marker key={p.id} position={[p.ubicacion.lat, p.ubicacion.lng]} icon={iconoPedido(soles(gananciaSocia(p)))} eventHandlers={{ click: () => onElegir?.(p) }} />
       ))}
       <Encuadre puntos={puntos} />
     </MapContainer>
