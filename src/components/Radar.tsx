@@ -63,7 +63,7 @@ export function MapaEspera({ socia, pedidos, onElegir }: { socia: Socia; pedidos
   return (
     <div className="relative overflow-hidden rounded-3xl shadow-lg ring-1 ring-black/10">
       <MapaRadar pedidos={pedidos} onElegir={onElegir} />
-      <p className="absolute right-2 top-2 z-[500] rounded bg-white/80 px-1.5 text-[10px] text-suave">© OpenStreetMap · CARTO</p>
+      <p className="absolute right-2 top-2 z-[500] rounded bg-white/80 px-1.5 text-[10px] text-suave">© OpenStreetMap</p>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[500] bg-gradient-to-t from-[#0b1f44]/90 via-[#0b1f44]/60 to-transparent px-4 pb-6 pt-10 text-white">
         <p className="text-lg font-extrabold">
           {pedidos.length > 0 ? `🔔 ${pedidos.length} pedido${pedidos.length === 1 ? "" : "s"} cerca de ti` : "📡 Buscando pedidos cerca de ti…"}
@@ -119,7 +119,7 @@ export function BuscandoSocia({ pedido, disponibles }: { pedido: Pedido; disponi
   return (
     <div className="relative overflow-hidden rounded-3xl shadow-lg ring-1 ring-black/10">
       <MapaRadar casa={[pedido.ubicacion.lat, pedido.ubicacion.lng]} alto={300} />
-      <p className="absolute right-2 top-2 z-[500] rounded bg-white/80 px-1.5 text-[10px] text-suave">© OpenStreetMap · CARTO</p>
+      <p className="absolute right-2 top-2 z-[500] rounded bg-white/80 px-1.5 text-[10px] text-suave">© OpenStreetMap</p>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[500] bg-gradient-to-t from-[#0b1f44]/90 via-[#0b1f44]/60 to-transparent px-4 pb-5 pt-10 text-white">
         <p className="text-xl font-extrabold">🔎 Buscando a tu socia…</p>
         <p className="text-sm text-white/85">

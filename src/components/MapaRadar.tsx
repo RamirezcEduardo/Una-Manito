@@ -75,7 +75,7 @@ export default function MapaRadar({ pedidos = [], onElegir, alto = 340, casa }: 
   const puntos: [number, number][] = [centro, ...pedidos.map((p) => [p.ubicacion.lat, p.ubicacion.lng] as [number, number])];
   return (
     <MapContainer center={centro} zoom={12} zoomControl={false} attributionControl={false} style={{ height: alto, width: "100%" }} scrollWheelZoom={false}>
-      <TileLayer attribution='&copy; OpenStreetMap &copy; CARTO' url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
+      <TileLayer attribution="&copy; OpenStreetMap" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
       <Marker position={centro} icon={casa ? iconoCasa : iconoSocia} interactive={false} />
       {pedidos.map((p) => (
         <Marker key={p.id} position={[p.ubicacion.lat, p.ubicacion.lng]} icon={iconoPedido(soles(gananciaSocia(p)))} eventHandlers={{ click: () => onElegir?.(p) }} />
