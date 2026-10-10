@@ -24,6 +24,8 @@ export interface Datos {
   invitaciones: Invitacion[];
   /** Libro de Reclamaciones: el equipo ve todas; cada usuario, las suyas. */
   reclamaciones: Reclamacion[];
+  /** Última ubicación GPS de la socia por pedido (solo mientras va en camino). */
+  seguimiento: Record<string, { lat: number; lng: number; en: string }>;
 }
 
 export type NuevoPedido = Omit<Pedido, "id" | "estado" | "pago" | "creadoEn" | "clienteId" | "comisionPct" | "propina" | "motivoCancelacion" | "cargoServicio" | "liquidado" | "planOrigen">;
@@ -86,6 +88,8 @@ export interface Api extends Datos {
   responderReclamo: (id: string, respuesta: string) => Promise<void>;
   /** Sube y guarda la foto de perfil del usuario actual (si es socia, también es la que ven los clientes). */
   cambiarFoto: (archivo: File) => Promise<void>;
+  /** La socia comparte su ubicación mientras va en camino. */
+  compartirUbicacion: (pedidoId: string, lat: number, lng: number) => Promise<void>;
   reiniciar: () => void; // solo demo
 }
 

@@ -1,6 +1,6 @@
 "use client";
 import { use } from "react";
-import { AgregarCalendario, BotonEmergencia } from "@/components/Extras";
+import { AgregarCalendario, BotonEmergencia, CompartirUbicacion } from "@/components/Extras";
 import { Mapa } from "@/components/MapaDinamico";
 import { Cabecera, Contactar, EstadoBadge, Estrellas, FormCalificar, Pantalla, accion } from "@/components/ui";
 import { comisionDe, ETIQUETA_ESTADO, FRECUENCIAS, formatoFecha, gananciaSocia, pagoCliente, parteUnaManito, SIGUIENTE_ESTADO, soles } from "@/lib/config";
@@ -23,6 +23,7 @@ export default function PedidoSocia({ params }: { params: Promise<{ id: string }
       <Cabecera titulo="Servicio" volver="/socia" />
       <Pantalla>
         <div className="tarjeta flex items-center justify-between"><b>Estado</b><EstadoBadge estado={p.estado} /></div>
+        <CompartirUbicacion pedido={p} />
         <div className="tarjeta space-y-2">
           <p className="text-lg font-bold">👤 {cliente?.nombre}</p>
           {cliente && !["terminado", "cancelado"].includes(p.estado) && (

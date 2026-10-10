@@ -2,7 +2,7 @@
 import { use, useEffect, useRef, useState } from "react";
 import { AgregarCalendario, BotonEmergencia, BotonWhatsApp } from "@/components/Extras";
 import { Mapa } from "@/components/MapaDinamico";
-import { BuscandoSocia, SociaAcepto } from "@/components/Radar";
+import { BuscandoSocia, MapaServicio, SociaAcepto } from "@/components/Radar";
 import { Avatar, Cabecera, Contactar, EstadoBadge, Estrellas, FormCalificar, NivelBadge, Pantalla, accion } from "@/components/ui";
 import { FRECUENCIAS, formatoFecha, MOTIVOS_CANCELACION, PROPINAS, soles } from "@/lib/config";
 import { useDatos } from "@/lib/store";
@@ -19,7 +19,7 @@ const MENSAJE_ETAPA: Partial<Record<EstadoPedido, (nombre: string) => string>> =
 
 export default function DetallePedido({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { pedidos, socias, config, cancelarPedido, marcarPagado, calificar, detenerPlan, listo } = useDatos();
+  const { pedidos, socias, config, cancelarPedido, marcarPagado, calificar, detenerPlan, listo, seguimiento } = useDatos();
   const p = pedidos.find((x) => x.id === id);
   const [cancelando, setCancelando] = useState(false);
   const [paciencia, setPaciencia] = useState(false); // "Seguir esperando"
@@ -51,7 +51,7 @@ export default function DetallePedido({ params }: { params: Promise<{ id: string
               ))}
             </ol>
           )}
-          {socia && MENSAJE_ETAPA[p.estado] && <p className="rounded-2xl bg-marca-claro p-3 text-center text-lg font-bold text-marca-oscuro">{MENSAJE_ETAPA[p.estado]!(socia.nombre.split(" ")[0])}</p>}
+          {socia && p.estado === "terminado" && MENSAJE_ETAPA[p.estado] && <p className="rounded-2xl bg-marca-claro p-3 text-center text-lg font-bold text-marca-oscuro">{MENSAJE_ETAPA[p.estado]!(socia.nombre.split(" ")[0])}</p>}
           {p.estado === "cancelado" && p.motivoCancelacion && <p className="text-center text-suave">Motivo: {p.motivoCancelacion}</p>}
         </div>
 
@@ -65,6 +65,8 @@ export default function DetallePedido({ params }: { params: Promise<{ id: string
             <button className="btn-borde" onClick={() => setCancelando(true)}>Cancelar y pedir para otra hora</button>
           </div>
         )}
+
+        {socia && <MapaServicio pedido={p} socia={socia} gps={seguimiento[p.id]} />}
 
         {socia && (
           <div className="tarjeta space-y-3">
@@ -83,7 +85,7 @@ export default function DetallePedido({ params }: { params: Promise<{ id: string
         )}
 
         <div className="tarjeta space-y-2">
-          {p.estado !== "buscando" && <Mapa lat={p.ubicacion.lat} lng={p.ubicacion.lng} alto={160} />}
+          {["terminado", "cancelado"].includes(p.estado) && <Mapa lat={p.ubicacion.lat} lng={p.ubicacion.lng} alto={160} />}
           <p>📍 {p.ubicacion.direccion}, {p.ubicacion.distrito}</p>
           <p>🕒 {formatoFecha(p.fecha)} · {p.horas} h</p>
           <p>🧴 {p.conMateriales ? "La socia lleva materiales" : "Materiales de la casa"}</p>

@@ -78,6 +78,7 @@ const SEMILLA: Datos = {
     ...SOCIAS_DEMO.map((s, i) => ({ id: s.id, nombre: s.nombre, telefono: s.telefono, email: `${s.nombre.split(" ")[0].toLowerCase()}@correo.pe`, rol: "socia" as const, creadoEn: new Date(Date.now() - (35 - i * 6) * 864e5).toISOString() })),
   ],
   invitaciones: [{ email: "marketing@unamanito.pe", nombre: "Equipo de marketing", rol: "admin", creadoEn: new Date().toISOString() }],
+  seguimiento: {},
   reclamaciones: [{
     id: "r1", numero: 1, creadoEn: new Date(Date.now() - 2 * 864e5).toISOString(), tipo: "reclamo", nombre: "Diego Ramos", tipoDocumento: "DNI", documento: "44556677",
     email: "diego@correo.pe", telefono: "987111003", menorDeEdad: false, bien: "servicio", monto: 55, descripcionBien: "Limpieza del hogar, 3 horas",
@@ -127,6 +128,7 @@ function DemoProvider({ children }: { children: ReactNode }) {
 
   const api: Api = {
     ...d,
+    seguimiento: d.seguimiento ?? {},
     listo,
     demo: true,
     sinPerfil: false,
@@ -234,6 +236,8 @@ function DemoProvider({ children }: { children: ReactNode }) {
         usuarios: x.usuarios.map((u) => (u.id === x.sesion?.id ? { ...u, foto } : u)),
         socias: x.socias.map((s) => (s.id === x.sesion?.id ? { ...s, foto } : s)) }));
     },
+    compartirUbicacion: async (pedidoId, lat, lng) =>
+      mod((x) => ({ ...x, seguimiento: { ...(x.seguimiento ?? {}), [pedidoId]: { lat, lng, en: new Date().toISOString() } } })),
     reiniciar: () => setD(SEMILLA),
   };
 

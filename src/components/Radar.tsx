@@ -151,3 +151,43 @@ export function SociaAcepto({ socia, onCerrar }: { socia: Socia; onCerrar: () =>
     </div>
   );
 }
+
+/** Cliente con socia asignada: moto animada en camino o casa con la socia trabajando. */
+/** Distancia en km entre dos puntos (fórmula del haversine). */
+const km = (a: [number, number], b: [number, number]) => {
+  const r = (g: number) => (g * Math.PI) / 180;
+  const h = Math.sin(r(b[0] - a[0]) / 2) ** 2 + Math.cos(r(a[0])) * Math.cos(r(b[0])) * Math.sin(r(b[1] - a[1]) / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.sqrt(h));
+};
+
+export function MapaServicio({ pedido, socia, gps }: { pedido: Pedido; socia: Socia; gps?: { lat: number; lng: number; en: string } }) {
+  const nombre = socia.nombre.split(" ")[0];
+  const [, refrescar] = useState(0);
+  useEffect(() => { const t = setInterval(() => refrescar((x) => x + 1), 15_000); return () => clearInterval(t); }, []);
+  // Solo se usa si es reciente (menos de 3 minutos).
+  const vivo = gps && Date.now() - new Date(gps.en).getTime() < 3 * 60_000 ? gps : undefined;
+  const casa: [number, number] = [pedido.ubicacion.lat, pedido.ubicacion.lng];
+  const dist = vivo ? km([vivo.lat, vivo.lng], casa) : 0;
+  // En Lima, ~18 km/h promedio en ciudad, más 2 minutos para estacionar y tocar la puerta.
+  const minutos = vivo ? Math.max(1, Math.round((dist / 18) * 60) + 2) : 0;
+  const etapa = pedido.estado === "en_curso" ? "curso" : pedido.estado === "en_camino" ? "camino" : undefined;
+  const texto = {
+    aceptado: [`🤝 ${nombre} se está preparando`, "Te avisaremos cuando salga hacia tu casa"],
+    en_camino: vivo
+      ? [`🛵 ${nombre} llega en ~${minutos} min`, `A ${dist < 1 ? `${Math.round(dist * 1000)} m` : `${dist.toFixed(1)} km`} de tu casa · ubicación en vivo`]
+      : [`🛵 ${nombre} va en camino`, "Esperando su ubicación en vivo…"],
+    en_curso: [`✨ ${nombre} está trabajando en tu casa`, `${pedido.horas} h de servicio`],
+  }[pedido.estado as "aceptado" | "en_camino" | "en_curso"];
+  if (!texto) return null;
+  return (
+    <div className="relative overflow-hidden rounded-3xl shadow-lg ring-1 ring-black/10">
+      <MapaRadar casa={casa} etapa={etapa} inicial={nombre[0]?.toUpperCase()} alto={300} sociaGps={vivo ? [vivo.lat, vivo.lng] : undefined} />
+      {vivo && pedido.estado === "en_camino" && <span className="absolute left-3 top-3 z-[500] flex items-center gap-1.5 rounded-full bg-red-600 px-2.5 py-1 text-xs font-bold text-white"><span className="radar-punto h-2 w-2 rounded-full bg-white" /> EN VIVO</span>}
+      <p className="absolute right-2 top-2 z-[500] rounded bg-white/80 px-1.5 text-[10px] text-suave">© OpenStreetMap</p>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[500] bg-gradient-to-t from-[#0b1f44]/90 via-[#0b1f44]/60 to-transparent px-4 pb-5 pt-10 text-white">
+        <p className="text-xl font-extrabold">{texto[0]}</p>
+        <p className="text-sm text-white/80">{texto[1]}</p>
+      </div>
+    </div>
+  );
+}

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useDatos } from "@/lib/store";
 import type { Pedido } from "@/lib/tipos";
 
@@ -90,4 +90,35 @@ export function EnlaceReclamaciones({ className = "" }: { className?: string }) 
       📕 Libro de Reclamaciones
     </Link>
   );
+}
+
+/**
+ * La socia comparte su GPS con el cliente mientras el pedido está aceptado o en camino.
+ * Solo funciona con esta pantalla abierta (limitación de las apps web). Envía como máximo cada 10 s.
+ */
+export function CompartirUbicacion({ pedido }: { pedido: Pedido }) {
+  const { compartirUbicacion } = useDatos();
+  const [estado, setEstado] = useState<"activo" | "sin-permiso" | "no-disponible">("activo");
+  const activo = pedido.estado === "aceptado" || pedido.estado === "en_camino";
+  useEffect(() => {
+    if (!activo) return;
+    if (!navigator.geolocation) { setEstado("no-disponible"); return; }
+    let ultimo = 0;
+    const id = navigator.geolocation.watchPosition(
+      (p) => {
+        setEstado("activo");
+        if (Date.now() - ultimo < 10_000) return;
+        ultimo = Date.now();
+        compartirUbicacion(pedido.id, p.coords.latitude, p.coords.longitude).catch(() => {});
+      },
+      (e) => setEstado(e.code === e.PERMISSION_DENIED ? "sin-permiso" : "no-disponible"),
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 },
+    );
+    return () => navigator.geolocation.clearWatch(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activo, pedido.id]);
+  if (!activo) return null;
+  if (estado === "sin-permiso") return <p className="rounded-xl bg-acento-claro p-3 text-sm">📍 Activa la ubicación para que el cliente vea que vas en camino (ajustes del navegador → Ubicación → Permitir).</p>;
+  if (estado === "no-disponible") return null;
+  return <p className="flex items-center gap-2 rounded-xl bg-green-50 p-3 text-sm font-semibold text-green-800"><span className="radar-punto h-2.5 w-2.5 rounded-full bg-green-600" /> Compartiendo tu ubicación con el cliente. Mantén esta pantalla abierta.</p>;
 }
