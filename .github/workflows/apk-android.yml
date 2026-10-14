@@ -1,0 +1,65 @@
+# Compila el APK de Android (Capacitor) y lo publica en GitHub Releases con un enlace de descarga fijo.
+name: APK Android
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - "android/**"
+      - "capacitor.config.ts"
+      - "movil/**"
+      - "package.json"
+      - ".github/workflows/apk-android.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Copiar configuración a Android
+        run: npx cap sync android
+
+      - name: Compilar APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../una-manito.apk
+
+      - name: Guardar como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: una-manito-apk
+          path: una-manito.apk
+
+      - name: Publicar en Releases (enlace fijo)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-ultima
+          name: "Una Manito · APK para Android"
+          body: |
+            APK de prueba de Una Manito (versión beta).
+            Descárgalo desde el celular, ábrelo y permite "instalar apps de origen desconocido".
+            La app abre https://unamanito.vercel.app, así que se actualiza sola con cada cambio de la web.
+          files: una-manito.apk
+          make_latest: true
