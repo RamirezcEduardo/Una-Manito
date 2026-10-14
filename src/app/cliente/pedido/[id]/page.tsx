@@ -2,6 +2,8 @@
 import { use, useEffect, useRef, useState } from "react";
 import { AgregarCalendario, BotonEmergencia, BotonWhatsApp } from "@/components/Extras";
 import { Mapa } from "@/components/MapaDinamico";
+import { ActivarAvisos } from "@/components/ActivarAvisos";
+import { sonarCelebracion } from "@/lib/avisos";
 import { Chat, FotosServicio, TareasServicio } from "@/components/Servicio";
 import { BuscandoSocia, MapaServicio, SociaAcepto } from "@/components/Radar";
 import { Avatar, Cabecera, Contactar, EstadoBadge, Estrellas, FormCalificar, NivelBadge, Pantalla, accion } from "@/components/ui";
@@ -29,7 +31,7 @@ export default function DetallePedido({ params }: { params: Promise<{ id: string
   const estadoAnterior = useRef(p?.estado);
   const [celebrar, setCelebrar] = useState(false);
   useEffect(() => {
-    if (estadoAnterior.current === "buscando" && p?.estado === "aceptado") setCelebrar(true);
+    if (estadoAnterior.current === "buscando" && p?.estado === "aceptado") { setCelebrar(true); sonarCelebracion(); }
     estadoAnterior.current = p?.estado;
   }, [p?.estado]);
   if (!listo) return null;
@@ -56,6 +58,7 @@ export default function DetallePedido({ params }: { params: Promise<{ id: string
           {p.estado === "cancelado" && p.motivoCancelacion && <p className="text-center text-suave">Motivo: {p.motivoCancelacion}</p>}
         </div>
 
+        {p.estado === "buscando" && <ActivarAvisos texto="Avísame cuando una socia acepte (aunque cierre la app)" />}
         {p.estado === "buscando" && <BuscandoSocia pedido={p} disponibles={socias.filter((s) => s.estado === "aprobada" && s.disponible && s.distritos.includes(p.ubicacion.distrito) && s.servicios.includes(p.servicio)).length} />}
 
         {p.estado === "buscando" && minutosBuscando >= 20 && !paciencia && (

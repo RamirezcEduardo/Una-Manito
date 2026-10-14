@@ -103,6 +103,8 @@ export interface Api extends Datos {
   /** Equipo: aprueba o rechaza; el video se borra al revisarlo. */
   revisarVerificacion: (usuarioId: string, aprobar: boolean, motivo?: string) => Promise<void>;
   verVideoVerificacion: (ruta: string) => Promise<string>;
+  /** Guarda la suscripción push de este dispositivo para el usuario actual. */
+  guardarSuscripcion: (s: { endpoint: string; p256dh: string; auth: string }) => Promise<void>;
   reiniciar: () => void; // solo demo
 }
 

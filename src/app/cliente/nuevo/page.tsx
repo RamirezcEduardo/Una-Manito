@@ -8,6 +8,7 @@ import { Cabecera, Opcion, Pantalla, accion } from "@/components/ui";
 import { calcularPrecio, DISTRITOS_CALLAO, DISTRITOS_LIMA_TODOS, FRECUENCIAS, formatoFecha, LIMA, soles } from "@/lib/config";
 import { direccionDePunto, emparejarDistrito, type Lugar } from "@/lib/geo";
 import { useDatos } from "@/lib/store";
+import { prepararSonido } from "@/lib/avisos";
 import type { Frecuencia, ServicioId } from "@/lib/tipos";
 
 function Formulario() {
@@ -93,6 +94,7 @@ function Formulario() {
   const enviar = () => {
     if (bloqueo.current) return;
     bloqueo.current = true;
+    prepararSonido(); // permite que suene la melodía cuando una socia acepte
     setEnviando(true);
     accion(async () => {
       try {

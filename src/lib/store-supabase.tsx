@@ -368,6 +368,10 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       falla(error);
       return data!.signedUrl;
     },
+    guardarSuscripcion: async (s) => {
+      const { error } = await sb.rpc("guardar_suscripcion", { p_endpoint: s.endpoint, p_p256dh: s.p256dh, p_auth: s.auth });
+      falla(error);
+    },
     reiniciar: () => {},
   };
 

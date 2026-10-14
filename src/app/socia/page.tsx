@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 import { BotonWhatsApp } from "@/components/Extras";
 import { MenuInferior } from "@/components/Menu";
+import { ActivarAvisos } from "@/components/ActivarAvisos";
 import { MiVerificacion } from "@/components/PruebaDeVida";
 import { AlertaPedido, MapaEspera } from "@/components/Radar";
 import { Avatar, Cabecera, EstadoBadge, Pantalla, accion } from "@/components/ui";
@@ -22,7 +23,7 @@ export default function PanelSocia() {
   const paraAviso = useMemo(() => cercanos.map((p) => ({ id: p.id, texto: `${p.ubicacion.distrito} · ${formatoFecha(p.fecha)} · ${p.horas} h` })), [cercanos]);
   const disponible = !!yo && yo.estado === "aprobada" && yo.disponible;
   useAvisoPedidosNuevos(paraAviso, disponible);
-  const { permiso, pedir } = usePermisoAvisos();
+  const { permiso } = usePermisoAvisos();
   // Alerta grande: el pedido más reciente que la socia aún no descartó.
   const [descartados, setDescartados] = useState<string[]>([]);
   const [elegido, setElegido] = useState<string | null>(null); // pedido tocado en el mapa
@@ -65,13 +66,8 @@ export default function PanelSocia() {
           {yo.disponible ? "🟢 Estoy disponible" : "⚪ No disponible — tocar para activar"}
         </button>
         {yo.disponible && <MapaEspera socia={yo} pedidos={cercanos} onElegir={(p) => setElegido(p.id)} />}
-        {yo.disponible && permiso === "default" && (
-          <button onClick={pedir} className="btn border-2 border-acento bg-acento-claro text-tinta">🔔 Activar avisos de pedidos nuevos</button>
-        )}
-        {yo.disponible && permiso === "denied" && (
-          <p className="rounded-xl bg-acento-claro p-3 text-sm">🔕 Los avisos están bloqueados. Actívalos en los ajustes del navegador para enterarte de pedidos nuevos.</p>
-        )}
-        {yo.disponible && <p className="text-center text-sm text-suave">🔔 Deja esta pantalla abierta: te avisaremos con sonido cuando llegue un pedido.</p>}
+        <ActivarAvisos texto="Activar avisos de pedidos (aunque la app esté cerrada)" />
+        {yo.disponible && <p className="text-center text-sm text-suave">{permiso === "granted" ? "🔔 Te avisaremos con sonido aunque cierres la app." : "🔔 Deja esta pantalla abierta: te avisaremos con sonido cuando llegue un pedido."}</p>}
 
         <div className="tarjeta flex items-center gap-4">
           <Avatar foto={yo.foto} nombre={yo.nombre} tam={64} />

@@ -275,6 +275,7 @@ function DemoProvider({ children }: { children: ReactNode }) {
       if (estado === "aprobada" && s && s.verificado === false) throw new Error("Primero aprueba su verificación de identidad (video)");
       mod((x) => ({ ...x, socias: x.socias.map((y) => (y.id === id ? { ...y, estado } : y)) }));
     },
+    guardarSuscripcion: async () => {},
     reiniciar: () => setD(SEMILLA),
   };
 
