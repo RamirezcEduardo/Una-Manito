@@ -7,7 +7,7 @@ import { CONFIG_INICIAL } from "./config";
 import { supabase as sbOpcional } from "./supabase";
 import type { Calificacion, Pedido, ServicioId } from "./tipos";
 
-const VACIO: Datos = { config: CONFIG_INICIAL, clientes: [], socias: [], pedidos: [], sesion: null, usuarios: [], invitaciones: [], reclamaciones: [], seguimiento: {} };
+const VACIO: Datos = { config: CONFIG_INICIAL, clientes: [], socias: [], pedidos: [], sesion: null, usuarios: [], invitaciones: [], reclamaciones: [], seguimiento: {}, mensajes: [] };
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function aPedido(r: any, cals: any[]): Pedido {
@@ -35,6 +35,9 @@ function aPedido(r: any, cals: any[]): Pedido {
     frecuencia: r.frecuencia ?? "unica",
     planOrigen: r.plan_origen ?? undefined,
     liquidado: !!r.liquidado,
+    tareasHechas: r.tareas_hechas ?? [],
+    fotos: r.fotos ?? [],
+    sociaPreferida: r.socia_preferida ?? undefined,
     motivoCancelacion: r.motivo_cancelacion ?? undefined,
     comisionPct: Number(r.comision_pct),
     pago: { metodo: r.pago_metodo ?? undefined, estado: r.pago_estado },
@@ -97,7 +100,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const [perfiles, socias, privado, pedidos, cals, invitaciones, personales, reclamos, segui] = await Promise.all([
+    const [perfiles, socias, privado, pedidos, cals, invitaciones, personales, reclamos, segui, msjs] = await Promise.all([
       sb.from("perfiles").select("*"),
       sb.from("socias").select("*"),
       sb.from("socias_privado").select("*"),
@@ -107,6 +110,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       sb.from("perfiles_privado").select("*"),
       sb.from("reclamaciones").select("*").order("numero", { ascending: false }),
       sb.from("seguimiento").select("*"),
+      sb.from("mensajes").select("*").order("creado_en").limit(1000),
     ]);
     const personal = (id: string) => {
       const p = (personales.data ?? []).find((x: any) => x.id === id);
@@ -138,6 +142,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
         };
       }),
       pedidos: (pedidos.data ?? []).map((r: any) => aPedido(r, cals.data ?? [])),
+      mensajes: (msjs.data ?? []).map((m: any) => ({ id: m.id, pedidoId: m.pedido_id, autorId: m.autor_id, texto: m.texto, creadoEn: m.creado_en })),
       seguimiento: Object.fromEntries((segui.data ?? []).map((g: any) => [g.pedido_id, { lat: g.lat, lng: g.lng, en: g.actualizado_en }])),
       reclamaciones: (reclamos.data ?? []).map((r: any) => ({
         id: r.id, numero: Number(r.numero), creadoEn: r.creado_en, tipo: r.tipo, nombre: r.nombre, tipoDocumento: r.tipo_documento, documento: r.documento,
@@ -158,6 +163,12 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     const canal = sb.channel("cambios")
       .on("postgres_changes", { event: "*", schema: "public", table: "pedidos" }, recargar)
       .on("postgres_changes", { event: "*", schema: "public", table: "socias" }, recargar)
+      // Mensajes nuevos del chat: se agregan sin recargar todo.
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "mensajes" }, (cambio: any) => {
+        const m = cambio.new;
+        setD((x) => (x.mensajes.some((y) => y.id === m.id) ? x
+          : { ...x, mensajes: [...x.mensajes, { id: m.id, pedidoId: m.pedido_id, autorId: m.autor_id, texto: m.texto, creadoEn: m.creado_en }] }));
+      })
       // La ubicación de la socia llega seguido: se actualiza solo ese dato, sin recargar todo.
       .on("postgres_changes", { event: "*", schema: "public", table: "seguimiento" }, (cambio: any) => {
         const g = cambio.new?.pedido_id ? cambio.new : null;
@@ -260,6 +271,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
         referencia: p.ubicacion.referencia || null, lat: p.ubicacion.lat, lng: p.ubicacion.lng,
         fecha: p.fecha === "asap" ? null : new Date(p.fecha).toISOString(),
         horas: p.horas, con_materiales: p.conMateriales, notas: p.notas || null, tareas: p.tareas, frecuencia: p.frecuencia,
+        socia_preferida: p.sociaPreferida ?? null,
       }).select("id").single();
       falla(error);
       await cargar();
@@ -314,6 +326,27 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     compartirUbicacion: async (pedidoId, lat, lng) => {
       const { error } = await sb.rpc("actualizar_ubicacion", { p_pedido: pedidoId, p_lat: lat, p_lng: lng });
       falla(error);
+    },
+    enviarMensaje: async (pedidoId, texto) => {
+      if (!texto.trim()) return;
+      const { data, error } = await sb.from("mensajes").insert({ pedido_id: pedidoId, texto: texto.trim() }).select("*").single();
+      falla(error);
+      setD((x) => (x.mensajes.some((y) => y.id === data.id) ? x
+        : { ...x, mensajes: [...x.mensajes, { id: data.id, pedidoId: data.pedido_id, autorId: data.autor_id, texto: data.texto, creadoEn: data.creado_en }] }));
+    },
+    marcarTarea: async (id, tarea, hecha) => { await rpc("marcar_tarea", { p_pedido: id, p_tarea: tarea, p_hecha: hecha }); },
+    subirFotoServicio: async (id, tipo, archivo) => {
+      if (!archivo.type.startsWith("image/")) throw new Error("Elige una imagen");
+      if (archivo.size > 8 * 1024 * 1024) throw new Error("La foto debe pesar menos de 8 MB");
+      const ruta = `${id}/${tipo}-${Date.now()}.${archivo.name.split(".").pop() || "jpg"}`;
+      const { error } = await sb.storage.from("servicios").upload(ruta, archivo);
+      falla(error);
+      await rpc("agregar_foto", { p_pedido: id, p_tipo: tipo, p_ruta: ruta });
+    },
+    verFotoServicio: async (ruta) => {
+      const { data, error } = await sb.storage.from("servicios").createSignedUrl(ruta, 600);
+      falla(error);
+      return data!.signedUrl;
     },
     reiniciar: () => {},
   };

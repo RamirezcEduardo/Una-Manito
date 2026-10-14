@@ -11,9 +11,11 @@ import { useDatos } from "@/lib/store";
 import type { Frecuencia, ServicioId } from "@/lib/tipos";
 
 function Formulario() {
-  const { config, crearPedido } = useDatos();
+  const { config, crearPedido, socias } = useDatos();
   const router = useRouter();
   const params = useSearchParams();
+  // "Volver a pedir con…": se avisa primero a esa socia durante 10 minutos.
+  const preferida = socias.find((s) => s.id === params.get("socia") && s.estado === "aprobada");
   const servicio = config.servicios.find((s) => s.id === (params.get("servicio") as ServicioId)) ?? config.servicios[0];
   const distritos = config.distritos.filter((d) => d.habilitado).map((d) => d.nombre);
 
@@ -96,7 +98,7 @@ function Formulario() {
       try {
         const id = await crearPedido({
           servicio: servicio.id, ubicacion: { direccion: [direccion.trim(), interior.trim()].filter(Boolean).join(", "), distrito, referencia, ...pos },
-          fecha: fechaPedido, horas, conMateriales, notas, tareas, recargo: precio.recargo, descuento: precio.descuento, frecuencia, total,
+          fecha: fechaPedido, horas, conMateriales, notas, tareas, recargo: precio.recargo, descuento: precio.descuento, frecuencia, total, sociaPreferida: preferida?.id,
         });
         router.replace(`/cliente/pedido/${id}`);
       } catch (e) {
@@ -110,6 +112,13 @@ function Formulario() {
   return (
     <Pantalla>
       <div className="flex items-center gap-3"><span className="text-4xl">{servicio.icono}</span><div><h2 className="text-2xl font-extrabold">{servicio.nombre}</h2><p className="font-semibold text-marca-oscuro">{servicio.eslogan}</p></div></div>
+
+      {preferida && (
+        <div className="tarjeta flex items-center gap-3 border-2 border-acento bg-acento-claro">
+          <span className="text-3xl">💛</span>
+          <p><b>Le avisaremos primero a {preferida.nombre.split(" ")[0]}.</b> <span className="text-sm text-suave">Si no puede en 10 minutos, buscamos otra socia.</span></p>
+        </div>
+      )}
 
       <section className="tarjeta space-y-3">
         <h3 className="text-lg font-bold">📍 ¿Dónde?</h3>

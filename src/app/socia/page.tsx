@@ -14,7 +14,10 @@ export default function PanelSocia() {
   const { sesion, socias, pedidos, config, setDisponible, aceptarPedido, listo } = useDatos();
   const router = useRouter();
   const yo = socias.find((s) => s.id === sesion?.id);
-  const cercanos = useMemo(() => (yo ? pedidos.filter((p) => p.estado === "buscando" && yo.distritos.includes(p.ubicacion.distrito) && yo.servicios.includes(p.servicio) && enHorario(yo.horario, p.fecha)) : []), [pedidos, yo]);
+  const cercanos = useMemo(() => (yo ? pedidos.filter((p) => p.estado === "buscando" && yo.distritos.includes(p.ubicacion.distrito) && yo.servicios.includes(p.servicio) && enHorario(yo.horario, p.fecha)
+    // Si el cliente eligió a otra socia, esta lo ve recién a los 10 minutos.
+    && (!p.sociaPreferida || p.sociaPreferida === yo.id || Date.now() - new Date(p.creadoEn).getTime() > 10 * 60_000))
+    .sort((a, b) => Number(b.sociaPreferida === yo.id) - Number(a.sociaPreferida === yo.id)) : []), [pedidos, yo]);
   const paraAviso = useMemo(() => cercanos.map((p) => ({ id: p.id, texto: `${p.ubicacion.distrito} · ${formatoFecha(p.fecha)} · ${p.horas} h` })), [cercanos]);
   const disponible = !!yo && yo.estado === "aprobada" && yo.disponible;
   useAvisoPedidosNuevos(paraAviso, disponible);
@@ -104,6 +107,7 @@ export default function PanelSocia() {
               <div className="flex justify-between"><b>{s.icono} {s.nombre}</b><b className="text-marca">{soles(gananciaSocia(p))}</b></div>
               {p.recargo > 0 && <p className="inline-block rounded-full bg-green-100 px-2 py-0.5 text-sm font-bold text-green-800">💰 Pago extra por {p.fecha === "asap" ? "urgencia" : "fin de semana"}</p>}
               <p className="text-suave">📍 {p.ubicacion.distrito} · 🕒 {formatoFecha(p.fecha)}</p>
+              {p.sociaPreferida === yo.id && <p className="inline-block rounded-full bg-acento-claro px-2 py-0.5 text-sm font-bold text-amber-900">💛 Este cliente te eligió a ti</p>}
               {p.frecuencia !== "unica" && <p className="inline-block rounded-full bg-green-100 px-2 py-0.5 text-sm font-bold text-green-800">🔁 Cliente fijo: {p.frecuencia === "semanal" ? "cada semana" : "cada 15 días"}</p>}
               <p className="text-suave">⏱️ {p.horas} h · 🧴 {p.conMateriales ? "Llevas tus materiales" : "Materiales del cliente"}</p>
               {p.tareas.length > 0 && <p className="text-suave">✅ {p.tareas.join(", ")}</p>}

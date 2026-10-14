@@ -1,7 +1,7 @@
 "use client";
 // Contrato de la capa de datos: lo implementan el modo demo (store.tsx) y Supabase (store-supabase.tsx).
 import { createContext } from "react";
-import type { Calificacion, Cliente, Config, DatosPersonales, Horario, MetodoPago, Pedido, Reclamacion, Socia, VerificacionSocia } from "./tipos";
+import type { Calificacion, Cliente, Config, DatosPersonales, Horario, Mensaje, MetodoPago, Pedido, Reclamacion, Socia, VerificacionSocia } from "./tipos";
 
 export type Rol = "cliente" | "socia" | "admin" | "ceo";
 export interface Sesion { rol: Rol; id: string }
@@ -26,9 +26,11 @@ export interface Datos {
   reclamaciones: Reclamacion[];
   /** Última ubicación GPS de la socia por pedido (solo mientras va en camino). */
   seguimiento: Record<string, { lat: number; lng: number; en: string }>;
+  /** Chat de los pedidos del usuario. */
+  mensajes: Mensaje[];
 }
 
-export type NuevoPedido = Omit<Pedido, "id" | "estado" | "pago" | "creadoEn" | "clienteId" | "comisionPct" | "propina" | "motivoCancelacion" | "cargoServicio" | "liquidado" | "planOrigen">;
+export type NuevoPedido = Omit<Pedido, "id" | "estado" | "pago" | "creadoEn" | "clienteId" | "comisionPct" | "propina" | "motivoCancelacion" | "cargoServicio" | "liquidado" | "planOrigen" | "tareasHechas" | "fotos">;
 export type NuevaReclamacion = Omit<Reclamacion, "id" | "numero" | "creadoEn" | "respuesta" | "respondidoEn">;
 export type NuevaSocia = Omit<Socia, "id" | "estado" | "disponible" | "calificacion" | "serviciosHechos" | "horario" | "foto" | "dni" | "personal" | "verificacion"> & {
   foto: File | string;
@@ -90,6 +92,11 @@ export interface Api extends Datos {
   cambiarFoto: (archivo: File) => Promise<void>;
   /** La socia comparte su ubicación mientras va en camino. */
   compartirUbicacion: (pedidoId: string, lat: number, lng: number) => Promise<void>;
+  enviarMensaje: (pedidoId: string, texto: string) => Promise<void>;
+  marcarTarea: (pedidoId: string, tarea: string, hecha: boolean) => Promise<void>;
+  subirFotoServicio: (pedidoId: string, tipo: "antes" | "despues", archivo: File) => Promise<void>;
+  /** URL temporal para ver una foto del servicio. */
+  verFotoServicio: (ruta: string) => Promise<string>;
   reiniciar: () => void; // solo demo
 }
 

@@ -52,7 +52,7 @@ function semillaPedidos(): Pedido[] {
         id: `d${dia}-${k}`, clienteId: elegir(CLIENTES_DEMO).id, sociaId: cancelado ? undefined : elegir(sociasZona), servicio: "limpieza",
         ubicacion: { direccion: `Calle ${elegir(["Las Begonias", "Los Pinos", "Schell", "Benavides", "Pardo", "Javier Prado"])} ${100 + Math.floor(azar() * 900)}`, distrito, lat, lng },
         fecha: urgente ? "asap" : creado.toISOString(), horas, conMateriales, tareas: ["Cocina", "Baños", "Pisos"],
-        estado: cancelado ? "cancelado" : "terminado", recargo, descuento: 0, cargoServicio: 0, frecuencia: "unica", liquidado: dia > 6, total: base + recargo, propina: !cancelado && azar() < 0.35 ? elegir([5, 10, 20]) : 0,
+        estado: cancelado ? "cancelado" : "terminado", recargo, descuento: 0, cargoServicio: 0, frecuencia: "unica", liquidado: dia > 6, tareasHechas: [], fotos: [], total: base + recargo, propina: !cancelado && azar() < 0.35 ? elegir([5, 10, 20]) : 0,
         comisionPct: 15, pago: cancelado ? { estado: "pendiente" } : { metodo: elegir(["yape", "plin", "efectivo"] as const), estado: "confirmado" },
         motivoCancelacion: cancelado ? "Ya no lo necesito" : undefined,
         calificacionSocia: cancelado ? undefined : { estrellas: elegir([5, 5, 5, 4]) }, creadoEn: creado.toISOString(),
@@ -79,6 +79,7 @@ const SEMILLA: Datos = {
   ],
   invitaciones: [{ email: "marketing@unamanito.pe", nombre: "Equipo de marketing", rol: "admin", creadoEn: new Date().toISOString() }],
   seguimiento: {},
+  mensajes: [],
   reclamaciones: [{
     id: "r1", numero: 1, creadoEn: new Date(Date.now() - 2 * 864e5).toISOString(), tipo: "reclamo", nombre: "Diego Ramos", tipoDocumento: "DNI", documento: "44556677",
     email: "diego@correo.pe", telefono: "987111003", menorDeEdad: false, bien: "servicio", monto: 55, descripcionBien: "Limpieza del hogar, 3 horas",
@@ -86,7 +87,7 @@ const SEMILLA: Datos = {
   }],
 };
 
-const CLAVE = "una-manito-demo-v7";
+const CLAVE = "una-manito-demo-v8";
 const nuevoId = (p: string) => p + Math.random().toString(36).slice(2, 8);
 const SIGUIENTE: Partial<Record<EstadoPedido, EstadoPedido>> = { aceptado: "en_camino", en_camino: "en_curso", en_curso: "terminado" };
 
@@ -108,7 +109,8 @@ function DemoProvider({ children }: { children: ReactNode }) {
   }, []);
   useEffect(() => {
     if (listo) try {
-      localStorage.setItem(CLAVE, JSON.stringify(d));
+      // La sesión no se guarda en lo compartido entre pestañas (evita un ciclo de cambios entre ellas).
+      localStorage.setItem(CLAVE, JSON.stringify({ ...d, sesion: null }));
       sessionStorage.setItem(CLAVE + "-sesion", JSON.stringify(d.sesion));
     } catch {}
   }, [d, listo]);
@@ -129,6 +131,7 @@ function DemoProvider({ children }: { children: ReactNode }) {
   const api: Api = {
     ...d,
     seguimiento: d.seguimiento ?? {},
+    mensajes: d.mensajes ?? [],
     listo,
     demo: true,
     sinPerfil: false,
@@ -164,7 +167,7 @@ function DemoProvider({ children }: { children: ReactNode }) {
       mod((x) => ({
         ...x,
         pedidos: [{ ...p, id, clienteId: x.sesion!.id, estado: "buscando", pago: { estado: "pendiente" }, propina: 0, comisionPct: x.config.comisionPct,
-          cargoServicio: x.config.cargoServicio, liquidado: false, creadoEn: new Date().toISOString() }, ...x.pedidos],
+          cargoServicio: x.config.cargoServicio, liquidado: false, tareasHechas: [], fotos: [], creadoEn: new Date().toISOString() }, ...x.pedidos],
       }));
       return id;
     },
@@ -185,7 +188,7 @@ function DemoProvider({ children }: { children: ReactNode }) {
       if (estado === "terminado" && p.frecuencia !== "unica" && p.fecha !== "asap") {
         const fecha = new Date(new Date(p.fecha).getTime() + (p.frecuencia === "semanal" ? 7 : 14) * 864e5).toISOString();
         pedidos.unshift({ ...p, id: nuevoId("p"), estado: "aceptado", fecha, planOrigen: p.planOrigen ?? p.id, propina: 0, liquidado: false,
-          pago: { estado: "pendiente" }, calificacionSocia: undefined, calificacionCliente: undefined, cargoServicio: x.config.cargoServicio, creadoEn: new Date().toISOString() });
+          pago: { estado: "pendiente" }, calificacionSocia: undefined, calificacionCliente: undefined, tareasHechas: [], fotos: [], cargoServicio: x.config.cargoServicio, creadoEn: new Date().toISOString() });
       }
       return { ...x, pedidos };
       });
@@ -238,6 +241,21 @@ function DemoProvider({ children }: { children: ReactNode }) {
     },
     compartirUbicacion: async (pedidoId, lat, lng) =>
       mod((x) => ({ ...x, seguimiento: { ...(x.seguimiento ?? {}), [pedidoId]: { lat, lng, en: new Date().toISOString() } } })),
+    enviarMensaje: async (pedidoId, texto) => {
+      if (!texto.trim()) return;
+      mod((x) => ({ ...x, mensajes: [...(x.mensajes ?? []), { id: nuevoId("m"), pedidoId, autorId: x.sesion!.id, texto: texto.trim(), creadoEn: new Date().toISOString() }] }));
+    },
+    marcarTarea: async (id, tarea, hecha) => modPedido(id, (p) => ({ ...p, tareasHechas: hecha ? [...new Set([...(p.tareasHechas ?? []), tarea])] : (p.tareasHechas ?? []).filter((t) => t !== tarea) })),
+    subirFotoServicio: async (id, tipo, archivo) => {
+      // En la demo la foto se guarda como imagen reducida dentro del navegador.
+      const ruta = await new Promise<string>((ok) => {
+        const img = new Image();
+        img.onload = () => { const c = document.createElement("canvas"); const k = 480 / Math.max(img.width, img.height, 480); c.width = img.width * k; c.height = img.height * k; c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height); ok(c.toDataURL("image/jpeg", 0.7)); };
+        img.src = URL.createObjectURL(archivo);
+      });
+      modPedido(id, (p) => ({ ...p, fotos: [...(p.fotos ?? []), { tipo, ruta, en: new Date().toISOString() }] }));
+    },
+    verFotoServicio: async (ruta) => ruta,
     reiniciar: () => setD(SEMILLA),
   };
 

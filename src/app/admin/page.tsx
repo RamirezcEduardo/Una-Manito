@@ -1,4 +1,5 @@
 "use client";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type ReactNode } from "react";
 import { BarrasH, GraficoArea } from "@/components/Graficos";
@@ -6,6 +7,9 @@ import { Avatar, Cabecera, EstadoBadge, NivelBadge, accion } from "@/components/
 import type { Rol } from "@/lib/api";
 import { comisionDe, DISTRITOS_CALLAO, ETIQUETA_ESTADO, formatoFecha, gananciaSocia, parteUnaManito, soles } from "@/lib/config";
 import { useDatos } from "@/lib/store";
+import { descargarCSV } from "@/lib/exportar";
+
+const MapaDemanda = dynamic(() => import("@/components/MapaDemanda"), { ssr: false, loading: () => <div className="h-[380px] animate-pulse rounded-2xl bg-marca-claro" /> });
 import type { EstadoPedido, Pedido } from "@/lib/tipos";
 
 type Seccion = "resumen" | "pedidos" | "socias" | "cobros" | "reclamos" | "usuarios" | "ajustes";
@@ -163,6 +167,19 @@ function Resumen({ irA }: { irA: (s: Seccion) => void }) {
         <Tarjeta titulo="Ventas por día" className="lg:col-span-2"><GraficoArea datos={porDia} formato={solesCortos} /></Tarjeta>
         <Tarjeta titulo="Pedidos por estado"><BarrasH datos={porEstado} /></Tarjeta>
         <Tarjeta titulo="Distritos con más servicios"><BarrasH datos={porDistrito} formato={(v) => `${v} servicios`} /></Tarjeta>
+        <Tarjeta titulo="🗺️ Mapa de demanda" className="lg:col-span-2">
+          <MapaDemanda pedidos={enPeriodo} />
+          <p className="mt-2 text-sm text-suave">🟢 terminado · 🟠 sin socia · 🔵 en proceso · ⚪ cancelado. Donde hay muchos naranjas, faltan socias.</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            {Object.entries(enPeriodo.reduce<Record<string, { total: number; sin: number }>>((acc, p) => {
+              const d = (acc[p.ubicacion.distrito] ??= { total: 0, sin: 0 });
+              d.total++; if (p.estado === "buscando" || (p.estado === "cancelado" && p.motivoCancelacion === "Demoran en encontrar socia")) d.sin++;
+              return acc;
+            }, {})).sort((a, b) => b[1].total - a[1].total).slice(0, 6).map(([dist, v]) => (
+              <div key={dist} className="rounded-xl bg-fondo px-3 py-2 text-sm"><b>{dist}</b> · {v.total} pedidos{v.sin > 0 && <span className="text-amber-700"> · {v.sin} sin socia</span>}</div>
+            ))}
+          </div>
+        </Tarjeta>
         <Tarjeta titulo="Pedidos recientes" className="lg:col-span-2" accion={<button onClick={() => irA("pedidos")} className="text-sm font-semibold text-marca">Ver todos →</button>}>
           <TablaPedidos pedidos={recientes} />
         </Tarjeta>
@@ -217,7 +234,13 @@ function Pedidos() {
     return texto.includes(q);
   });
   return (
-    <Tarjeta titulo={`${lista.length} pedidos`}>
+    <Tarjeta titulo={`${lista.length} pedidos`} accion={
+      <button className="rounded-xl bg-green-600 px-3 py-1.5 text-sm font-bold text-white" onClick={() => descargarCSV("pedidos", [
+        ["Fecha", "Estado", "Servicio", "Distrito", "Dirección", "Cliente", "Socia", "Horas", "Total servicio (S/)", "Cargo servicio (S/)", "Comisión (S/)", "Propina (S/)", "Gana socia (S/)", "Método de pago", "Pago", "Liquidado", "Plan"],
+        ...lista.map((p) => [new Date(p.creadoEn).toLocaleString("es-PE"), ETIQUETA_ESTADO[p.estado].texto, p.servicio, p.ubicacion.distrito, p.ubicacion.direccion,
+          clientes.find((c) => c.id === p.clienteId)?.nombre, socias.find((s) => s.id === p.sociaId)?.nombre, p.horas, p.total, p.cargoServicio, comisionDe(p), p.propina,
+          p.estado === "terminado" ? gananciaSocia(p) : 0, p.pago.metodo, p.pago.estado, p.liquidado ? "Sí" : "No", p.frecuencia]),
+      ])}>⬇️ Excel</button>}>
       <div className="mb-4 flex flex-col gap-2 lg:flex-row">
         <input className="campo lg:max-w-sm" placeholder="Buscar por cliente, socia, distrito…" value={busca} onChange={(e) => setBusca(e.target.value)} />
         <select className="campo lg:max-w-xs" value={filtro} onChange={(e) => setFiltro(e.target.value as EstadoPedido | "todos")}>
@@ -476,7 +499,11 @@ function Cobros() {
         <Kpi titulo="Por cobrar a socias" valor={soles(total)} nota={`${pendientes.length} servicios`} />
         <Kpi titulo="Socias con saldo" valor={porSocia.length} />
       </div>
-      <Tarjeta titulo="Saldos por socia">
+      <Tarjeta titulo="Saldos por socia" accion={
+        <button className="rounded-xl bg-green-600 px-3 py-1.5 text-sm font-bold text-white" onClick={() => descargarCSV("cobros-socias", [
+          ["Socia", "Celular", "Fecha", "Distrito", "Método", "Total servicio (S/)", "Comisión + cargo (S/)"],
+          ...porSocia.flatMap(({ s, ps }) => ps.map((p) => [s.nombre, s.telefono, new Date(p.creadoEn).toLocaleDateString("es-PE"), p.ubicacion.distrito, p.pago.metodo, p.total, parteUnaManito(p)])),
+        ])}>⬇️ Excel</button>}>
         {porSocia.length === 0 && <p className="text-suave">Todo al día 🎉</p>}
         <div className="divide-y">
           {porSocia.map(({ s, ps, total }) => (

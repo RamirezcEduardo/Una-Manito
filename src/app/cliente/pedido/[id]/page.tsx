@@ -2,6 +2,7 @@
 import { use, useEffect, useRef, useState } from "react";
 import { AgregarCalendario, BotonEmergencia, BotonWhatsApp } from "@/components/Extras";
 import { Mapa } from "@/components/MapaDinamico";
+import { Chat, FotosServicio, TareasServicio } from "@/components/Servicio";
 import { BuscandoSocia, MapaServicio, SociaAcepto } from "@/components/Radar";
 import { Avatar, Cabecera, Contactar, EstadoBadge, Estrellas, FormCalificar, NivelBadge, Pantalla, accion } from "@/components/ui";
 import { FRECUENCIAS, formatoFecha, MOTIVOS_CANCELACION, PROPINAS, soles } from "@/lib/config";
@@ -84,6 +85,10 @@ export default function DetallePedido({ params }: { params: Promise<{ id: string
           </div>
         )}
 
+        <TareasServicio pedido={p} editable={false} />
+        <FotosServicio pedido={p} editable={false} />
+        {socia && <Chat pedido={p} otroNombre={socia.nombre} />}
+
         <div className="tarjeta space-y-2">
           {["terminado", "cancelado"].includes(p.estado) && <Mapa lat={p.ubicacion.lat} lng={p.ubicacion.lng} alto={160} />}
           <p>📍 {p.ubicacion.direccion}, {p.ubicacion.distrito}</p>
@@ -114,6 +119,10 @@ export default function DetallePedido({ params }: { params: Promise<{ id: string
         {p.estado === "terminado" && socia && (p.calificacionSocia
           ? <div className="tarjeta"><p className="font-bold">Tu calificación</p><Estrellas valor={p.calificacionSocia.estrellas} /></div>
           : <FormCalificar titulo={`¿Cómo te fue con ${socia.nombre.split(" ")[0]}?`} onEnviar={(c) => accion(() => calificar(p.id, "socia", c))} />)}
+
+        {p.estado === "terminado" && socia && (
+          <a href={`/cliente/nuevo?servicio=${p.servicio}&socia=${socia.id}`} className="btn-acento block text-center">💛 Volver a pedir con {socia.nombre.split(" ")[0]}</a>
+        )}
 
         {["buscando", "aceptado"].includes(p.estado) && (
           <button className="btn border-2 border-red-300 bg-white text-red-600" onClick={() => setCancelando(true)}>Cancelar pedido</button>

@@ -102,6 +102,7 @@ export function AlertaPedido({ pedido, servicio, onAceptar, onCerrar }: { pedido
           <p>🕒 {formatoFecha(pedido.fecha)} · ⏱️ {pedido.horas} h</p>
           <p>🧴 {pedido.conMateriales ? "Llevas tus materiales" : "Materiales del cliente"}</p>
           {pedido.recargo > 0 && <p className="inline-block rounded-full bg-green-100 px-3 py-1 text-sm font-bold text-green-800">💰 Incluye pago extra</p>}
+          {pedido.sociaPreferida && <p className="inline-block rounded-full bg-acento-claro px-3 py-1 text-sm font-bold text-amber-900">💛 Te eligió a ti</p>}
           {pedido.frecuencia !== "unica" && <p className="inline-block rounded-full bg-green-100 px-3 py-1 text-sm font-bold text-green-800">🔁 Cliente fijo</p>}
           <button className="alerta-latido btn-acento mt-2 py-5 text-xl" onClick={onAceptar}>Aceptar pedido</button>
           <div className="h-2 overflow-hidden rounded-full bg-gray-100">

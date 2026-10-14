@@ -47,6 +47,9 @@ export interface Pedido {
   frecuencia: Frecuencia; // plan recurrente: al terminar se agenda la siguiente visita
   planOrigen?: string;
   liquidado: boolean; // la socia ya pagó a Una Manito su comisión y el cargo
+  tareasHechas: string[]; // lo que la socia ya marcó como hecho
+  fotos: FotoServicio[]; // antes y después (rutas en un bucket privado)
+  sociaPreferida?: string; // "volver a pedir con…": se le avisa primero
   motivoCancelacion?: string;
   comisionPct: number;
   pago: { metodo?: MetodoPago; estado: EstadoPago };
@@ -54,6 +57,9 @@ export interface Pedido {
   calificacionCliente?: Calificacion;
   creadoEn: string;
 }
+
+export interface FotoServicio { tipo: "antes" | "despues"; ruta: string; en: string }
+export interface Mensaje { id: string; pedidoId: string; autorId: string; texto: string; creadoEn: string }
 
 export interface Calificacion { estrellas: number; comentario?: string }
 

@@ -2,6 +2,7 @@
 import { use } from "react";
 import { AgregarCalendario, BotonEmergencia, CompartirUbicacion } from "@/components/Extras";
 import { Mapa } from "@/components/MapaDinamico";
+import { Chat, FotosServicio, TareasServicio } from "@/components/Servicio";
 import { Cabecera, Contactar, EstadoBadge, Estrellas, FormCalificar, Pantalla, accion } from "@/components/ui";
 import { comisionDe, ETIQUETA_ESTADO, FRECUENCIAS, formatoFecha, gananciaSocia, pagoCliente, parteUnaManito, SIGUIENTE_ESTADO, soles } from "@/lib/config";
 import { useDatos } from "@/lib/store";
@@ -57,6 +58,10 @@ export default function PedidoSocia({ params }: { params: Promise<{ id: string }
         </div>
         <AgregarCalendario pedido={p} titulo="Una Manito: servicio" />
         <BotonEmergencia pedido={p} quien="socia" />
+
+        <TareasServicio pedido={p} editable />
+        <FotosServicio pedido={p} editable />
+        {cliente && <Chat pedido={p} otroNombre={cliente.nombre} />}
 
         {sig && <button className="btn-primario py-6 text-xl" onClick={() => accion(() => avanzarPedido(p.id))}>{BOTON[p.estado as keyof typeof BOTON] ?? ETIQUETA_ESTADO[sig].texto}</button>}
 
