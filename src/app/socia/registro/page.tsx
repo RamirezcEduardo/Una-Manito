@@ -2,6 +2,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CampoFoto, CamposPersonales, errorPersonal, PERSONAL_VACIO } from "@/components/DatosPersonales";
+import { PruebaDeVida } from "@/components/PruebaDeVida";
 import { AceptoTerminos, AutorizoDatos } from "@/components/Legal";
 import { Cabecera, Opcion, Pantalla, accion } from "@/components/ui";
 import { DISTRITOS_CALLAO, DISTRITOS_LIMA_TODOS, ESLOGAN_SOCIA } from "@/lib/config";
@@ -33,6 +34,7 @@ export default function RegistroSocia() {
   const [declara, setDeclara] = useState(false);
   const [acepto, setAcepto] = useState(false);
   const [autorizo, setAutorizo] = useState(false);
+  const [vida, setVida] = useState<{ video: Blob; gesto: string } | null>(null);
   const toggle = <T,>(arr: T[], v: T) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
   const celular = /^9\d{8}$/;
   const cobro = mismoCelular ? telefono : cobroNumero;
@@ -45,6 +47,7 @@ export default function RegistroSocia() {
     !foto && "tu selfie",
     !dniFrente && "foto del DNI (frente)",
     !dniReverso && "foto del DNI (reverso)",
+    !vida && "video de prueba de vida",
     (direccion.trim().length < 5 || !distritoResidencia) && "dirección donde vives",
     (emergenciaNombre.trim().length < 3 || !emergenciaParentesco || !celular.test(emergenciaTelefono)) && "contacto de emergencia",
     !celular.test(cobro) && "número de Yape o Plin",
@@ -56,12 +59,14 @@ export default function RegistroSocia() {
     !autorizo && "autorizar el uso de tus datos",
   ].filter(Boolean) as string[];
 
+  const { enviarVerificacion } = useDatos();
   const enviar = () => accion(async () => {
     await registrarSocia({
       nombre: nombre.trim(), telefono, foto: foto!, distritos, servicios, personal, dniFrente: dniFrente!, dniReverso: dniReverso!,
       verificacion: { direccion: direccion.trim(), distritoResidencia, emergenciaNombre: emergenciaNombre.trim(), emergenciaParentesco,
         emergenciaTelefono, cobroNumero: cobro, experiencia, declaraSinAntecedentes: declara },
     });
+    if (vida) await enviarVerificacion(vida.video, vida.gesto);
     router.push("/socia");
   });
 
@@ -86,6 +91,7 @@ export default function RegistroSocia() {
             <CampoFoto etiqueta="Tu selfie" ayuda="Esta foto la verán tus clientes" archivo={foto} onChange={setFoto} selfie />
             <CampoFoto etiqueta="DNI – parte de adelante" archivo={dniFrente} onChange={setDniFrente} />
             <CampoFoto etiqueta="DNI – parte de atrás" archivo={dniReverso} onChange={setDniReverso} />
+            <PruebaDeVida onListo={(v, g) => setVida(v ? { video: v, gesto: g } : null)} />
           </section>
 
           <section className="tarjeta space-y-3">

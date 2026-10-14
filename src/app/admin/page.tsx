@@ -8,16 +8,18 @@ import type { Rol } from "@/lib/api";
 import { comisionDe, DISTRITOS_CALLAO, ETIQUETA_ESTADO, formatoFecha, gananciaSocia, parteUnaManito, soles } from "@/lib/config";
 import { useDatos } from "@/lib/store";
 import { descargarCSV } from "@/lib/exportar";
+import { VideoVerificacion } from "@/components/PruebaDeVida";
 
 const MapaDemanda = dynamic(() => import("@/components/MapaDemanda"), { ssr: false, loading: () => <div className="h-[380px] animate-pulse rounded-2xl bg-marca-claro" /> });
 import type { EstadoPedido, Pedido } from "@/lib/tipos";
 
-type Seccion = "resumen" | "pedidos" | "socias" | "cobros" | "reclamos" | "usuarios" | "ajustes";
+type Seccion = "resumen" | "pedidos" | "socias" | "verificaciones" | "cobros" | "reclamos" | "usuarios" | "ajustes";
 
 const SECCIONES: { id: Seccion; texto: string; icono: string }[] = [
   { id: "resumen", texto: "Resumen", icono: "📊" },
   { id: "pedidos", texto: "Pedidos", icono: "🧾" },
   { id: "socias", texto: "Socias", icono: "🧹" },
+  { id: "verificaciones", texto: "Verificaciones", icono: "🛡️" },
   { id: "cobros", texto: "Cobros a socias", icono: "💰" },
   { id: "reclamos", texto: "Reclamaciones", icono: "📕" },
   { id: "usuarios", texto: "Usuarios", icono: "👥" },
@@ -87,6 +89,7 @@ export default function Admin() {
           {seccion === "resumen" && <Resumen irA={setSeccion} />}
           {seccion === "pedidos" && <Pedidos />}
           {seccion === "socias" && <Socias />}
+          {seccion === "verificaciones" && <Verificaciones />}
           {seccion === "cobros" && <Cobros />}
           {seccion === "reclamos" && <Reclamos />}
           {seccion === "usuarios" && <Usuarios />}
@@ -372,9 +375,11 @@ function Socias() {
           </div>
           <p className="text-sm text-suave">📍 Trabaja en: {s.distritos.join(", ")}</p>
           <FichaVerificacion socia={s} abierta={s.estado === "pendiente"} />
+          {s.estado === "pendiente" && s.verificado === false && <p className="rounded-xl bg-acento-claro p-2 text-sm font-semibold">🛡️ Falta aprobar su prueba de vida (sección Verificaciones).</p>}
           {s.estado === "pendiente" && (
             <div className="grid grid-cols-2 gap-2">
-              <button className="btn bg-green-500 py-3 text-white" onClick={() => accion(() => setEstadoSocia(s.id, "aprobada"))}>Aprobar</button>
+              <button className="btn bg-green-500 py-3 text-white disabled:opacity-40" disabled={s.verificado === false}
+                title={s.verificado === false ? "Primero verifica su identidad" : undefined} onClick={() => accion(() => setEstadoSocia(s.id, "aprobada"))}>Aprobar</button>
               <button className="btn bg-red-100 py-3 text-red-700" onClick={() => accion(() => setEstadoSocia(s.id, "rechazada"))}>Rechazar</button>
             </div>
           )}
@@ -575,6 +580,68 @@ function Reclamos() {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/** Pruebas de vida pendientes: el video junto a los datos y fotos del DNI. Al revisar, el video se borra. */
+function Verificaciones() {
+  const { verificaciones, usuarios, socias, revisarVerificacion, verDocumento } = useDatos();
+  const [motivo, setMotivo] = useState<Record<string, string>>({});
+  const pendientes = verificaciones.filter((v) => v.estado === "pendiente" && v.video);
+  const revisadas = verificaciones.filter((v) => v.estado !== "pendiente").slice(0, 20);
+  const ver = (ruta?: string) => ruta && accion(async () => { window.open(await verDocumento(ruta), "_blank"); });
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Kpi titulo="Por revisar" valor={pendientes.length} nota="Revisa que la cara coincida con el DNI y que haga el gesto pedido" />
+        <Kpi titulo="Usuarios verificados" valor={usuarios.filter((u) => u.verificado).length} nota={`de ${usuarios.filter((u) => u.rol === "cliente" || u.rol === "socia").length} clientes y socias`} />
+      </div>
+      {pendientes.length === 0 && <div className="tarjeta text-suave">No hay verificaciones pendientes 🎉</div>}
+      <div className="grid gap-4 xl:grid-cols-2">
+        {pendientes.map((v) => {
+          const u = usuarios.find((x) => x.id === v.usuarioId);
+          const s = socias.find((x) => x.id === v.usuarioId);
+          return (
+            <div key={v.usuarioId} className="tarjeta space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div><b>{u?.nombre ?? s?.nombre ?? "Usuario"}</b> <span className="text-sm text-suave">· {s ? "Socia" : "Cliente"}</span>
+                  <p className="text-sm text-suave">{u?.personal ? `${u.personal.tipoDocumento} ${u.personal.documento} · nac. ${new Date(u.personal.fechaNacimiento + "T12:00").toLocaleDateString("es-PE")}` : ""}</p></div>
+                <span className="text-sm text-suave">{new Date(v.creadoEn).toLocaleString("es-PE")}</span>
+              </div>
+              <p className="rounded-xl bg-marca-claro p-2 text-sm">Gesto pedido: <b>“{v.gesto}”</b></p>
+              <div className="flex flex-wrap items-start gap-3">
+                <VideoVerificacion ruta={v.video!} />
+                {s && (
+                  <div className="space-y-2">
+                    <Avatar foto={s.foto} nombre={s.nombre} tam={96} />
+                    {s.verificacion?.dniFrente && <button className="block font-semibold text-marca underline" onClick={() => ver(s.verificacion?.dniFrente)}>🪪 Ver DNI frente</button>}
+                    {s.verificacion?.dniReverso && <button className="block font-semibold text-marca underline" onClick={() => ver(s.verificacion?.dniReverso)}>🪪 Ver DNI reverso</button>}
+                  </div>
+                )}
+              </div>
+              <input className="campo" placeholder="Motivo si rechazas (ej. no se ve la cara)" value={motivo[v.usuarioId] ?? ""} onChange={(e) => setMotivo({ ...motivo, [v.usuarioId]: e.target.value })} />
+              <div className="grid grid-cols-2 gap-2">
+                <button className="btn bg-green-500 py-3 text-white" onClick={() => accion(() => revisarVerificacion(v.usuarioId, true))}>✅ Es la persona</button>
+                <button className="btn bg-red-100 py-3 text-red-700" onClick={() => accion(() => revisarVerificacion(v.usuarioId, false, motivo[v.usuarioId] || "No pudimos confirmar tu identidad"))}>Rechazar</button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {revisadas.length > 0 && (
+        <Tarjeta titulo="Revisadas recientemente">
+          <div className="divide-y">
+            {revisadas.map((v) => (
+              <p key={v.usuarioId} className="flex justify-between py-2 text-sm">
+                <span>{usuarios.find((x) => x.id === v.usuarioId)?.nombre ?? "Usuario"}</span>
+                <span className={v.estado === "aprobada" ? "font-semibold text-green-700" : "font-semibold text-red-600"}>{v.estado === "aprobada" ? "✅ Verificada" : `✖ Rechazada${v.motivo ? ` · ${v.motivo}` : ""}`}</span>
+              </p>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-suave">🔒 Los videos se borran al revisarlos (Ley 29733).</p>
+        </Tarjeta>
+      )}
     </div>
   );
 }

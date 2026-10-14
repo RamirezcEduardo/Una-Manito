@@ -20,7 +20,7 @@ const CLIENTES_DEMO = [
 ];
 const SOCIAS_DEMO: Datos["socias"] = [
   { id: "s1", nombre: "Rosa Quispe", telefono: "912345678", dni: "45678912", foto: "", distritos: ["Miraflores", "Surco", "Barranco"], servicios: ["limpieza"], estado: "aprobada", disponible: true, calificacion: 4.9, serviciosHechos: 132, horario: { "1": [8, 18], "2": [8, 18], "3": [8, 18], "4": [8, 18], "5": [8, 18], "6": [9, 14] } },
-  { id: "s2", nombre: "Carmen Huamán", telefono: "923456789", dni: "41234567", foto: "", distritos: ["San Isidro", "Lince"], servicios: ["limpieza"], estado: "pendiente", disponible: false, calificacion: 0, serviciosHechos: 0, horario: {},
+  { id: "s2", nombre: "Carmen Huamán", telefono: "923456789", dni: "41234567", foto: "", distritos: ["San Isidro", "Lince"], servicios: ["limpieza"], estado: "pendiente", disponible: false, calificacion: 0, serviciosHechos: 0, horario: {}, verificado: false,
     personal: { tipoDocumento: "DNI", documento: "41234567", fechaNacimiento: "1988-04-12" },
     verificacion: { direccion: "Jr. Huáscar 456", distritoResidencia: "Jesús María", emergenciaNombre: "Pedro Huamán", emergenciaParentesco: "Hermano/a", emergenciaTelefono: "923000111", cobroNumero: "923456789", experiencia: "De 3 a 5 años", dniFrente: "/icono-512.png", dniReverso: "/icono-512.png", declaraSinAntecedentes: true } },
   { id: "s3", nombre: "Elena Mamani", telefono: "934567890", dni: "42345678", foto: "", distritos: ["San Isidro", "San Borja", "Surco"], servicios: ["limpieza"], estado: "aprobada", disponible: false, calificacion: 4.7, serviciosHechos: 24, horario: {} },
@@ -80,6 +80,8 @@ const SEMILLA: Datos = {
   invitaciones: [{ email: "marketing@unamanito.pe", nombre: "Equipo de marketing", rol: "admin", creadoEn: new Date().toISOString() }],
   seguimiento: {},
   mensajes: [],
+  // Carmen (socia pendiente) ya envió su prueba de vida; el resto de la demo está verificado.
+  verificaciones: [{ usuarioId: "s2", video: "/video/oficios.mp4", gesto: "Gira la cabeza a la derecha", estado: "pendiente", creadoEn: new Date(Date.now() - 3600e3).toISOString() }],
   reclamaciones: [{
     id: "r1", numero: 1, creadoEn: new Date(Date.now() - 2 * 864e5).toISOString(), tipo: "reclamo", nombre: "Diego Ramos", tipoDocumento: "DNI", documento: "44556677",
     email: "diego@correo.pe", telefono: "987111003", menorDeEdad: false, bien: "servicio", monto: 55, descripcionBien: "Limpieza del hogar, 3 horas",
@@ -87,7 +89,7 @@ const SEMILLA: Datos = {
   }],
 };
 
-const CLAVE = "una-manito-demo-v8";
+const CLAVE = "una-manito-demo-v9";
 const nuevoId = (p: string) => p + Math.random().toString(36).slice(2, 8);
 const SIGUIENTE: Partial<Record<EstadoPedido, EstadoPedido>> = { aceptado: "en_camino", en_camino: "en_curso", en_curso: "terminado" };
 
@@ -132,6 +134,7 @@ function DemoProvider({ children }: { children: ReactNode }) {
     ...d,
     seguimiento: d.seguimiento ?? {},
     mensajes: d.mensajes ?? [],
+    verificaciones: d.verificaciones ?? [],
     listo,
     demo: true,
     sinPerfil: false,
@@ -158,7 +161,7 @@ function DemoProvider({ children }: { children: ReactNode }) {
       const extra = { personal, dni: personal.tipoDocumento === "DNI" ? personal.documento : undefined,
         verificacion: { ...verificacion, dniFrente: URL.createObjectURL(dniFrente), dniReverso: URL.createObjectURL(dniReverso) } };
       mod((x) => ({
-        ...x, socias: [...x.socias, { ...datos, ...extra, foto, id, estado: "pendiente", disponible: false, calificacion: 0, serviciosHechos: 0, horario: {} }],
+        ...x, socias: [...x.socias, { ...datos, ...extra, foto, id, estado: "pendiente", disponible: false, calificacion: 0, serviciosHechos: 0, horario: {}, verificado: false }],
         usuarios: [...x.usuarios, { id, nombre: s.nombre, telefono: s.telefono, rol: "socia", personal, creadoEn: new Date().toISOString() }], sesion: { rol: "socia", id },
       }));
     },
@@ -199,7 +202,6 @@ function DemoProvider({ children }: { children: ReactNode }) {
     calificar: async (id, quien, c) =>
       modPedido(id, (p) => (quien === "socia" ? { ...p, calificacionSocia: c } : { ...p, calificacionCliente: c })),
     setDisponible: async (v) => mod((x) => ({ ...x, socias: x.socias.map((s) => (s.id === x.sesion?.id ? { ...s, disponible: v } : s)) })),
-    setEstadoSocia: async (id, estado) => mod((x) => ({ ...x, socias: x.socias.map((s) => (s.id === id ? { ...s, estado } : s)) })),
     setConfig: async (config) => mod((x) => ({ ...x, config })),
     setRolUsuario: async (id, rol) => {
       if (d.sesion?.rol !== "ceo") throw new Error("Solo el CEO puede cambiar roles");
@@ -256,6 +258,23 @@ function DemoProvider({ children }: { children: ReactNode }) {
       modPedido(id, (p) => ({ ...p, fotos: [...(p.fotos ?? []), { tipo, ruta, en: new Date().toISOString() }] }));
     },
     verFotoServicio: async (ruta) => ruta,
+    enviarVerificacion: async (video, gesto) => {
+      const url = URL.createObjectURL(video);
+      mod((x) => ({ ...x,
+        verificaciones: [{ usuarioId: x.sesion!.id, video: url, gesto, estado: "pendiente" as const, creadoEn: new Date().toISOString() }, ...(x.verificaciones ?? []).filter((v) => v.usuarioId !== x.sesion!.id)],
+        usuarios: x.usuarios.map((u) => (u.id === x.sesion!.id ? { ...u, verificado: false } : u)) }));
+    },
+    revisarVerificacion: async (id, aprobar, motivo) => mod((x) => ({ ...x,
+      verificaciones: (x.verificaciones ?? []).map((v) => (v.usuarioId === id ? { ...v, video: undefined, estado: aprobar ? "aprobada" as const : "rechazada" as const, motivo } : v)),
+      usuarios: x.usuarios.map((u) => (u.id === id ? { ...u, verificado: aprobar } : u)),
+      clientes: x.clientes.map((c) => (c.id === id ? { ...c, verificado: aprobar } : c)),
+      socias: x.socias.map((s) => (s.id === id ? { ...s, verificado: aprobar } : s)) })),
+    verVideoVerificacion: async (ruta) => ruta,
+    setEstadoSocia: async (id, estado) => {
+      const s = d.socias.find((x) => x.id === id);
+      if (estado === "aprobada" && s && s.verificado === false) throw new Error("Primero aprueba su verificación de identidad (video)");
+      mod((x) => ({ ...x, socias: x.socias.map((y) => (y.id === id ? { ...y, estado } : y)) }));
+    },
     reiniciar: () => setD(SEMILLA),
   };
 

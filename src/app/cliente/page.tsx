@@ -7,7 +7,8 @@ import { ESLOGAN_CLIENTE, formatoFecha, soles } from "@/lib/config";
 import { useDatos } from "@/lib/store";
 
 export default function InicioCliente() {
-  const { sesion, clientes, pedidos, config } = useDatos();
+  const { sesion, clientes, pedidos, config, verificaciones } = useDatos();
+  const enRevision = verificaciones.some((v) => v.usuarioId === sesion?.id && v.estado === "pendiente");
   const yo = clientes.find((c) => c.id === sesion?.id);
   const activos = pedidos.filter((p) => p.clienteId === sesion?.id && !["terminado", "cancelado"].includes(p.estado));
   // Recordatorio de la próxima visita programada (las de las próximas 48 horas destacan).
@@ -22,6 +23,13 @@ export default function InicioCliente() {
           <p className="text-2xl font-extrabold">¡Hola{yo ? `, ${yo.nombre.split(" ")[0]}` : ""}! 👋</p>
           <p className="text-suave">{ESLOGAN_CLIENTE}</p>
         </div>
+
+        {yo && !yo.verificado && !enRevision && (
+          <Link href="/cliente/perfil" className="tarjeta block border-2 border-acento bg-acento-claro">
+            <p className="font-bold">🛡️ Verifica tu identidad</p>
+            <p className="text-sm text-suave">Toma 4 segundos. Las socias atienden con más confianza a clientes verificados.</p>
+          </Link>
+        )}
 
         {pronto && (
           <Link href={`/cliente/pedido/${proxima.id}`} className="tarjeta block bg-acento-claro">

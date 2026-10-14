@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { EnlaceReclamaciones } from "@/components/Extras";
+import { MiVerificacion } from "@/components/PruebaDeVida";
 import { Avatar, accion } from "@/components/ui";
 import { useDatos } from "@/lib/store";
 
@@ -77,6 +78,7 @@ export function PerfilVista({ rol }: { rol: "cliente" | "socia" }) {
           <div key={k} className="flex justify-between gap-3 py-2"><span className="text-suave">{k}</span><b className="text-right">{v}</b></div>
         ))}
       </div>
+      <MiVerificacion />
       <p className="text-center text-sm text-suave">¿Necesitas cambiar tus datos? Escríbenos por WhatsApp.</p>
 
       {!demo && (

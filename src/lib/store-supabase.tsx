@@ -7,7 +7,7 @@ import { CONFIG_INICIAL } from "./config";
 import { supabase as sbOpcional } from "./supabase";
 import type { Calificacion, Pedido, ServicioId } from "./tipos";
 
-const VACIO: Datos = { config: CONFIG_INICIAL, clientes: [], socias: [], pedidos: [], sesion: null, usuarios: [], invitaciones: [], reclamaciones: [], seguimiento: {}, mensajes: [] };
+const VACIO: Datos = { config: CONFIG_INICIAL, clientes: [], socias: [], pedidos: [], sesion: null, usuarios: [], invitaciones: [], reclamaciones: [], seguimiento: {}, mensajes: [], verificaciones: [] };
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function aPedido(r: any, cals: any[]): Pedido {
@@ -100,7 +100,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const [perfiles, socias, privado, pedidos, cals, invitaciones, personales, reclamos, segui, msjs] = await Promise.all([
+    const [perfiles, socias, privado, pedidos, cals, invitaciones, personales, reclamos, segui, msjs, verifs] = await Promise.all([
       sb.from("perfiles").select("*"),
       sb.from("socias").select("*"),
       sb.from("socias_privado").select("*"),
@@ -111,6 +111,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       sb.from("reclamaciones").select("*").order("numero", { ascending: false }),
       sb.from("seguimiento").select("*"),
       sb.from("mensajes").select("*").order("creado_en").limit(1000),
+      sb.from("verificaciones").select("*").order("creado_en", { ascending: false }),
     ]);
     const personal = (id: string) => {
       const p = (personales.data ?? []).find((x: any) => x.id === id);
@@ -123,8 +124,8 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     setD({
       config,
       sesion: yo ? { rol: yo.rol, id: yo.id } : null,
-      clientes: ps.map((p: any) => ({ id: p.id, nombre: p.nombre, telefono: p.telefono, email: p.email ?? undefined, foto: p.foto_url ?? undefined })),
-      usuarios: ps.map((p: any) => ({ id: p.id, nombre: p.nombre, telefono: p.telefono, email: p.email ?? undefined, rol: p.rol, creadoEn: p.creado_en, personal: personal(p.id), foto: p.foto_url ?? undefined })),
+      clientes: ps.map((p: any) => ({ id: p.id, nombre: p.nombre, telefono: p.telefono, email: p.email ?? undefined, foto: p.foto_url ?? undefined, verificado: !!p.verificado })),
+      usuarios: ps.map((p: any) => ({ id: p.id, nombre: p.nombre, telefono: p.telefono, email: p.email ?? undefined, rol: p.rol, creadoEn: p.creado_en, personal: personal(p.id), foto: p.foto_url ?? undefined, verificado: !!p.verificado })),
       invitaciones: (invitaciones.data ?? []).map((i: any) => ({ email: i.email, nombre: i.nombre ?? undefined, rol: i.rol, creadoEn: i.creado_en })),
       socias: (socias.data ?? []).map((s: any) => {
         const p = ps.find((x: any) => x.id === s.id);
@@ -138,10 +139,11 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
             experiencia: v.experiencia ?? "", dniFrente: v.dni_frente ?? undefined, dniReverso: v.dni_reverso ?? undefined, declaraSinAntecedentes: !!v.declara_sin_antecedentes,
           })((privado.data ?? []).find((x: any) => x.id === s.id)),
           foto: s.foto_url, distritos: s.distritos, servicios: s.servicios, estado: s.estado,
-          disponible: s.disponible, calificacion: Number(s.calificacion), serviciosHechos: s.servicios_hechos, horario: s.horario ?? {},
+          disponible: s.disponible, calificacion: Number(s.calificacion), serviciosHechos: s.servicios_hechos, horario: s.horario ?? {}, verificado: !!p?.verificado,
         };
       }),
       pedidos: (pedidos.data ?? []).map((r: any) => aPedido(r, cals.data ?? [])),
+      verificaciones: (verifs.data ?? []).map((v: any) => ({ usuarioId: v.usuario_id, video: v.video ?? undefined, gesto: v.gesto, estado: v.estado, motivo: v.motivo ?? undefined, creadoEn: v.creado_en })),
       mensajes: (msjs.data ?? []).map((m: any) => ({ id: m.id, pedidoId: m.pedido_id, autorId: m.autor_id, texto: m.texto, creadoEn: m.creado_en })),
       seguimiento: Object.fromEntries((segui.data ?? []).map((g: any) => [g.pedido_id, { lat: g.lat, lng: g.lng, en: g.actualizado_en }])),
       reclamaciones: (reclamos.data ?? []).map((r: any) => ({
@@ -345,6 +347,24 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     },
     verFotoServicio: async (ruta) => {
       const { data, error } = await sb.storage.from("servicios").createSignedUrl(ruta, 600);
+      falla(error);
+      return data!.signedUrl;
+    },
+    enviarVerificacion: async (video, gesto) => {
+      if (video.size > 15 * 1024 * 1024) throw new Error("El video es muy pesado. Graba uno más corto.");
+      const ext = video.type.includes("mp4") ? "mp4" : video.type.includes("quicktime") ? "mov" : "webm";
+      const ruta = `${uidRef.current}/prueba-${Date.now()}.${ext}`;
+      const { error } = await sb.storage.from("verificaciones").upload(ruta, video, { contentType: video.type || "video/webm" });
+      falla(error);
+      await rpc("enviar_verificacion", { p_video: ruta, p_gesto: gesto });
+    },
+    revisarVerificacion: async (id, aprobar, motivo) => {
+      const ruta = (await rpc("revisar_verificacion", { p_usuario: id, p_aprobar: aprobar, p_motivo: motivo ?? null })) as string | null;
+      // Dato sensible: el video se borra apenas se revisa.
+      if (ruta) await sb.storage.from("verificaciones").remove([ruta]);
+    },
+    verVideoVerificacion: async (ruta) => {
+      const { data, error } = await sb.storage.from("verificaciones").createSignedUrl(ruta, 300);
       falla(error);
       return data!.signedUrl;
     },

@@ -1,7 +1,7 @@
 "use client";
 // Contrato de la capa de datos: lo implementan el modo demo (store.tsx) y Supabase (store-supabase.tsx).
 import { createContext } from "react";
-import type { Calificacion, Cliente, Config, DatosPersonales, Horario, Mensaje, MetodoPago, Pedido, Reclamacion, Socia, VerificacionSocia } from "./tipos";
+import type { Calificacion, Cliente, Config, DatosPersonales, Horario, Mensaje, Verificacion, MetodoPago, Pedido, Reclamacion, Socia, VerificacionSocia } from "./tipos";
 
 export type Rol = "cliente" | "socia" | "admin" | "ceo";
 export interface Sesion { rol: Rol; id: string }
@@ -10,7 +10,7 @@ export interface Sesion { rol: Rol; id: string }
 export const esEquipo = (rol?: Rol) => rol === "admin" || rol === "ceo";
 export const rutaDeRol = (rol: Rol) => (esEquipo(rol) ? "/admin" : `/${rol}`);
 
-export interface Usuario { id: string; nombre: string; telefono: string; email?: string; rol: Rol; creadoEn?: string; personal?: DatosPersonales; foto?: string }
+export interface Usuario { id: string; nombre: string; telefono: string; email?: string; rol: Rol; creadoEn?: string; personal?: DatosPersonales; foto?: string; verificado?: boolean }
 export interface Invitacion { email: string; nombre?: string; rol: "admin" | "ceo"; creadoEn: string }
 
 export interface Datos {
@@ -28,6 +28,8 @@ export interface Datos {
   seguimiento: Record<string, { lat: number; lng: number; en: string }>;
   /** Chat de los pedidos del usuario. */
   mensajes: Mensaje[];
+  /** Pruebas de vida: el equipo ve todas; cada persona, la suya. */
+  verificaciones: Verificacion[];
 }
 
 export type NuevoPedido = Omit<Pedido, "id" | "estado" | "pago" | "creadoEn" | "clienteId" | "comisionPct" | "propina" | "motivoCancelacion" | "cargoServicio" | "liquidado" | "planOrigen" | "tareasHechas" | "fotos">;
@@ -97,6 +99,10 @@ export interface Api extends Datos {
   subirFotoServicio: (pedidoId: string, tipo: "antes" | "despues", archivo: File) => Promise<void>;
   /** URL temporal para ver una foto del servicio. */
   verFotoServicio: (ruta: string) => Promise<string>;
+  enviarVerificacion: (video: Blob, gesto: string) => Promise<void>;
+  /** Equipo: aprueba o rechaza; el video se borra al revisarlo. */
+  revisarVerificacion: (usuarioId: string, aprobar: boolean, motivo?: string) => Promise<void>;
+  verVideoVerificacion: (ruta: string) => Promise<string>;
   reiniciar: () => void; // solo demo
 }
 

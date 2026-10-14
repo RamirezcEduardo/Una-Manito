@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 import { BotonWhatsApp } from "@/components/Extras";
 import { MenuInferior } from "@/components/Menu";
+import { MiVerificacion } from "@/components/PruebaDeVida";
 import { AlertaPedido, MapaEspera } from "@/components/Radar";
 import { Avatar, Cabecera, EstadoBadge, Pantalla, accion } from "@/components/ui";
 import { enHorario, ESLOGAN_SOCIA, formatoFecha, gananciaSocia, nivelSocia, soles } from "@/lib/config";
@@ -41,6 +42,7 @@ export default function PanelSocia() {
             <h2 className="text-xl font-extrabold">{yo.estado === "pendiente" ? "Tu solicitud está en revisión" : "Tu solicitud no fue aprobada"}</h2>
             <p className="text-suave">{yo.estado === "pendiente" ? "Te avisaremos por WhatsApp apenas te aprobemos. ¡Gracias por tu paciencia!" : "Escríbenos si crees que es un error."}</p>
           </div>
+          {yo.estado === "pendiente" && <MiVerificacion />}
         </Pantalla>
       </>
     );

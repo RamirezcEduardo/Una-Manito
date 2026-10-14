@@ -36,7 +36,7 @@ export function AutorizoDatos({ valor, onChange, socia = false }: { valor: boole
       <input type="checkbox" className="mt-1 h-6 w-6 shrink-0 accent-[var(--color-marca)]" checked={valor} onChange={(e) => onChange(e.target.checked)} />
       <span className="text-sm">
         Autorizo de forma libre, previa y expresa a {EMPRESA.nombre} a tratar mis datos personales
-        {socia ? " (incluidas mi foto, las fotos de mi documento y mi contacto de emergencia)" : " (incluido mi documento de identidad y fecha de nacimiento)"}{" "}
+        {socia ? " (incluidas mi foto, las fotos de mi documento, mi contacto de emergencia" : " (incluido mi documento de identidad, fecha de nacimiento"} y el video de prueba de vida, que es un dato biométrico y se borra apenas se verifica mi identidad){" "}
         para verificar mi identidad y prestar el servicio, según la Ley 29733 y la{" "}
         <Link href="/privacidad" target="_blank" className="font-semibold text-marca underline">Política de privacidad</Link>.
         Puedo revocar esta autorización cuando quiera.

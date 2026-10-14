@@ -63,7 +63,17 @@ export interface Mensaje { id: string; pedidoId: string; autorId: string; texto:
 
 export interface Calificacion { estrellas: number; comentario?: string }
 
-export interface Cliente { id: string; nombre: string; telefono: string; email?: string; foto?: string }
+export interface Cliente { id: string; nombre: string; telefono: string; email?: string; foto?: string; verificado?: boolean }
+
+/** Prueba de vida: video corto con un gesto al azar, revisado por el equipo. El video se borra al revisarlo. */
+export interface Verificacion {
+  usuarioId: string;
+  video?: string;
+  gesto: string;
+  estado: "pendiente" | "aprobada" | "rechazada";
+  motivo?: string;
+  creadoEn: string;
+}
 
 /** Datos personales privados (solo la persona y el equipo los ven). */
 export interface DatosPersonales {
@@ -102,6 +112,7 @@ export interface Socia {
   calificacion: number;
   serviciosHechos: number;
   horario: Horario;
+  verificado?: boolean;
 }
 
 /** Días y horas en que la socia trabaja: {"1": [8, 18]} con 1 = lunes … 7 = domingo. Vacío = siempre. */

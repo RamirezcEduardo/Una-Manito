@@ -26,7 +26,7 @@ export default function PedidoSocia({ params }: { params: Promise<{ id: string }
         <div className="tarjeta flex items-center justify-between"><b>Estado</b><EstadoBadge estado={p.estado} /></div>
         <CompartirUbicacion pedido={p} />
         <div className="tarjeta space-y-2">
-          <p className="text-lg font-bold">👤 {cliente?.nombre}</p>
+          <p className="text-lg font-bold">👤 {cliente?.nombre} {cliente?.verificado && <span className="ml-1 rounded-full bg-green-100 px-2 py-0.5 align-middle text-xs font-bold text-green-800">✅ Verificado</span>}</p>
           {cliente && !["terminado", "cancelado"].includes(p.estado) && (
             <Contactar telefono={cliente.telefono} mensaje={`Hola ${cliente.nombre.split(" ")[0]}, soy tu socia de Una Manito para el servicio en ${p.ubicacion.direccion}.`} />
           )}
