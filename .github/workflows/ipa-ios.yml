@@ -1,0 +1,69 @@
+# Compila la app de iPhone (Capacitor) en una Mac de GitHub y publica un IPA SIN FIRMAR.
+# Se instala con Sideloadly o AltStore usando un Apple ID (gratis: la app dura 7 días y se renueva).
+# Para App Store o TestFlight hace falta la cuenta Apple Developer (99 USD/año) y firmar con certificado.
+name: IPA iOS
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - "ios/**"
+      - "capacitor.config.ts"
+      - "movil/**"
+      - "package.json"
+      - ".github/workflows/ipa-ios.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  ipa:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Copiar configuración a iOS
+        run: npx cap sync ios
+
+      - name: Compilar (sin firma)
+        working-directory: ios/App
+        run: |
+          xcodebuild -project App.xcodeproj -scheme App -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Empaquetar IPA
+        run: |
+          mkdir -p Payload
+          cp -R ios/App/build/Build/Products/Release-iphoneos/App.app Payload/
+          zip -qry una-manito.ipa Payload
+
+      - name: Guardar como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: una-manito-ipa
+          path: una-manito.ipa
+
+      - name: Publicar en Releases (enlace fijo)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ipa-ultima
+          name: "Una Manito · IPA para iPhone (sin firmar)"
+          body: |
+            IPA de prueba de Una Manito para iPhone, SIN FIRMAR.
+            Instálalo con Sideloadly (Windows/Mac) o AltStore usando tu Apple ID.
+            Con un Apple ID gratuito la app funciona 7 días y luego se vuelve a firmar.
+            La app abre https://unamanito.vercel.app, así que se actualiza sola con cada cambio de la web.
+          files: una-manito.ipa
+          make_latest: false
