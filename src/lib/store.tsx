@@ -53,7 +53,7 @@ function semillaPedidos(): Pedido[] {
         ubicacion: { direccion: `Calle ${elegir(["Las Begonias", "Los Pinos", "Schell", "Benavides", "Pardo", "Javier Prado"])} ${100 + Math.floor(azar() * 900)}`, distrito, lat, lng },
         fecha: urgente ? "asap" : creado.toISOString(), horas, conMateriales, tareas: ["Cocina", "Baños", "Pisos"],
         estado: cancelado ? "cancelado" : "terminado", recargo, descuento: 0, cargoServicio: 0, frecuencia: "unica", liquidado: dia > 6, tareasHechas: [], fotos: [], total: base + recargo, propina: !cancelado && azar() < 0.35 ? elegir([5, 10, 20]) : 0,
-        comisionPct: 15, pago: cancelado ? { estado: "pendiente" } : { metodo: elegir(["yape", "plin", "efectivo"] as const), estado: "confirmado" },
+        comisionPct: 18, pago: cancelado ? { estado: "pendiente" } : { metodo: elegir(["yape", "plin", "efectivo"] as const), estado: "confirmado" },
         motivoCancelacion: cancelado ? "Ya no lo necesito" : undefined,
         calificacionSocia: cancelado ? undefined : { estrellas: elegir([5, 5, 5, 4]) }, creadoEn: creado.toISOString(),
       });

@@ -30,7 +30,7 @@ create table public.distritos (
 
 create table public.config (
   id int primary key default 1 check (id = 1),
-  comision_pct numeric(5,2) not null default 15 check (comision_pct between 0 and 100)
+  comision_pct numeric(5,2) not null default 18 check (comision_pct between 0 and 100)
 );
 
 -- ───────────── Usuarios ─────────────
@@ -329,7 +329,7 @@ create policy "subir mi foto" on storage.objects for insert to authenticated
 alter publication supabase_realtime add table public.pedidos, public.socias;
 
 -- ───────────── Datos iniciales ─────────────
-insert into public.config (id, comision_pct) values (1, 15);
+insert into public.config (id, comision_pct) values (1, 18);
 
 insert into public.servicios (id, nombre, icono, eslogan, activo, precio_hora, horas_min, recargo_materiales, orden) values
   ('limpieza', 'Limpieza del hogar', '🧹', 'Te damos una manito en tu hogar, al toque.', true, 15, 3, 10, 1),

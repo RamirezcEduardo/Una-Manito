@@ -23,7 +23,7 @@ export const DISTRITOS_LIMA_TODOS = [
 export const DISTRITOS_CALLAO = ["Callao", "Bellavista", "Carmen de la Legua", "La Perla", "La Punta", "Mi Perú", "Ventanilla"];
 
 export const CONFIG_INICIAL: Config = {
-  comisionPct: 15,
+  comisionPct: 18,
   recargoUrgentePct: 10,
   recargoFindePct: 10,
   cargoServicio: 0,
