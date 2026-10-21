@@ -139,7 +139,7 @@ export default function MapaRadar({ pedidos = [], onElegir, alto = 340, casa, et
       )}
       {etapa === "camino" && casa && !sociaGps && <MotoEnCamino casa={casa} />}
       {pedidos.map((p) => (
-        <Marker key={p.id} position={[p.ubicacion.lat, p.ubicacion.lng]} icon={iconoPedido(soles(gananciaSocia(p)))} eventHandlers={{ click: () => onElegir?.(p) }} />
+        <Marker key={p.id} position={[p.ubicacion.lat, p.ubicacion.lng]} icon={iconoPedido(p.total > 0 ? soles(gananciaSocia(p)) : "💌 Cotizar")} eventHandlers={{ click: () => onElegir?.(p) }} />
       ))}
       <Encuadre puntos={puntos} />
     </MapContainer>

@@ -7,7 +7,7 @@ import { CONFIG_INICIAL } from "./config";
 import { supabase as sbOpcional } from "./supabase";
 import type { Calificacion, Pedido, ServicioId } from "./tipos";
 
-const VACIO: Datos = { config: CONFIG_INICIAL, clientes: [], socias: [], pedidos: [], sesion: null, usuarios: [], invitaciones: [], reclamaciones: [], seguimiento: {}, mensajes: [], verificaciones: [] };
+const VACIO: Datos = { config: CONFIG_INICIAL, clientes: [], socias: [], pedidos: [], sesion: null, usuarios: [], invitaciones: [], reclamaciones: [], seguimiento: {}, mensajes: [], verificaciones: [], ofertas: [], promociones: [] };
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function aPedido(r: any, cals: any[]): Pedido {
@@ -38,6 +38,9 @@ function aPedido(r: any, cals: any[]): Pedido {
     tareasHechas: r.tareas_hechas ?? [],
     fotos: r.fotos ?? [],
     sociaPreferida: r.socia_preferida ?? undefined,
+    modalidad: r.modalidad ?? "domicilio",
+    promoId: r.promo_id ?? undefined,
+    ofertaId: r.oferta_id ?? undefined,
     motivoCancelacion: r.motivo_cancelacion ?? undefined,
     comisionPct: Number(r.comision_pct),
     pago: { metodo: r.pago_metodo ?? undefined, estado: r.pago_estado },
@@ -74,11 +77,13 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     const r = user?.user_metadata?.rol;
     setRolGuardado(r === "socia" || r === "cliente" ? r : null);
 
-    const [srv, dis, cfg] = await Promise.all([
+    const [srv, dis, cfg, prm] = await Promise.all([
       sb.from("servicios").select("*").order("orden"),
       sb.from("distritos").select("*").order("nombre"),
       sb.from("config").select("*").eq("id", 1).maybeSingle(),
+      sb.from("promociones").select("*").order("creado_en", { ascending: false }),
     ]);
+    const promociones = (prm.data ?? []).map((x: any) => ({ id: x.id, titulo: x.titulo, descripcion: x.descripcion ?? undefined, descuentoPct: Number(x.descuento_pct), activa: x.activa }));
     const config = {
       comisionPct: Number(cfg.data?.comision_pct ?? CONFIG_INICIAL.comisionPct),
       recargoUrgentePct: Number(cfg.data?.recargo_urgente_pct ?? CONFIG_INICIAL.recargoUrgentePct),
@@ -90,17 +95,18 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       servicios: (srv.data ?? []).map((x: any) => ({
         id: x.id as ServicioId, nombre: x.nombre, icono: x.icono, eslogan: x.eslogan, activo: x.activo,
         precioHora: Number(x.precio_hora), horasMin: x.horas_min, recargoMateriales: Number(x.recargo_materiales), tareas: x.tareas ?? [],
+        rubro: x.rubro ?? "hogar", cotizar: !!x.cotizar,
       })),
     };
 
     if (!user) {
       setSinPerfil(false);
-      setD({ ...VACIO, config });
+      setD({ ...VACIO, config, promociones });
       setListo(true);
       return;
     }
 
-    const [perfiles, socias, privado, pedidos, cals, invitaciones, personales, reclamos, segui, msjs, verifs] = await Promise.all([
+    const [perfiles, socias, privado, pedidos, cals, invitaciones, personales, reclamos, segui, msjs, verifs, ofs, parts] = await Promise.all([
       sb.from("perfiles").select("*"),
       sb.from("socias").select("*"),
       sb.from("socias_privado").select("*"),
@@ -112,6 +118,8 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       sb.from("seguimiento").select("*"),
       sb.from("mensajes").select("*").order("creado_en").limit(1000),
       sb.from("verificaciones").select("*").order("creado_en", { ascending: false }),
+      sb.from("ofertas").select("*").order("precio"),
+      sb.from("promo_socias").select("*"),
     ]);
     const personal = (id: string) => {
       const p = (personales.data ?? []).find((x: any) => x.id === id);
@@ -123,6 +131,8 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
 
     setD({
       config,
+      promociones,
+      ofertas: (ofs.data ?? []).map((o: any) => ({ id: o.id, pedidoId: o.pedido_id, sociaId: o.socia_id, precio: Number(o.precio), detalle: o.detalle ?? [], mensaje: o.mensaje ?? undefined, creadoEn: o.creado_en })),
       sesion: yo ? { rol: yo.rol, id: yo.id } : null,
       clientes: ps.map((p: any) => ({ id: p.id, nombre: p.nombre, telefono: p.telefono, email: p.email ?? undefined, foto: p.foto_url ?? undefined, verificado: !!p.verificado })),
       usuarios: ps.map((p: any) => ({ id: p.id, nombre: p.nombre, telefono: p.telefono, email: p.email ?? undefined, rol: p.rol, creadoEn: p.creado_en, personal: personal(p.id), foto: p.foto_url ?? undefined, verificado: !!p.verificado })),
@@ -140,6 +150,9 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
           })((privado.data ?? []).find((x: any) => x.id === s.id)),
           foto: s.foto_url, distritos: s.distritos, servicios: s.servicios, estado: s.estado,
           disponible: s.disponible, calificacion: Number(s.calificacion), serviciosHechos: s.servicios_hechos, horario: s.horario ?? {}, verificado: !!p?.verificado,
+          local: s.local_direccion ? { direccion: s.local_direccion, distrito: s.local_distrito ?? "" } : undefined,
+          portafolio: s.portafolio ?? [],
+          promos: (parts.data ?? []).filter((x: any) => x.socia_id === s.id).map((x: any) => x.promo_id),
         };
       }),
       pedidos: (pedidos.data ?? []).map((r: any) => aPedido(r, cals.data ?? [])),
@@ -165,6 +178,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     const canal = sb.channel("cambios")
       .on("postgres_changes", { event: "*", schema: "public", table: "pedidos" }, recargar)
       .on("postgres_changes", { event: "*", schema: "public", table: "socias" }, recargar)
+      .on("postgres_changes", { event: "*", schema: "public", table: "ofertas" }, recargar)
       // Mensajes nuevos del chat: se agregan sin recargar todo.
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "mensajes" }, (cambio: any) => {
         const m = cambio.new;
@@ -273,7 +287,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
         referencia: p.ubicacion.referencia || null, lat: p.ubicacion.lat, lng: p.ubicacion.lng,
         fecha: p.fecha === "asap" ? null : new Date(p.fecha).toISOString(),
         horas: p.horas, con_materiales: p.conMateriales, notas: p.notas || null, tareas: p.tareas, frecuencia: p.frecuencia,
-        socia_preferida: p.sociaPreferida ?? null,
+        socia_preferida: p.sociaPreferida ?? null, modalidad: p.modalidad, promo_id: p.promoId ?? null,
       }).select("id").single();
       falla(error);
       await cargar();
@@ -371,6 +385,31 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     guardarSuscripcion: async (s) => {
       const { error } = await sb.rpc("guardar_suscripcion", { p_endpoint: s.endpoint, p_p256dh: s.p256dh, p_auth: s.auth });
       falla(error);
+    },
+    ofertar: async (pedidoId, precio, detalle, mensaje) => { await rpc("ofertar", { p_pedido: pedidoId, p_precio: precio, p_detalle: detalle, p_mensaje: mensaje }); },
+    elegirOferta: async (id) => { await rpc("elegir_oferta", { p_oferta: id }); },
+    setMisServicios: async (servicios) => { await rpc("set_mis_servicios", { p_servicios: servicios }); },
+    setLocal: async (direccion, distrito) => { await rpc("set_local", { p_direccion: direccion, p_distrito: distrito }); },
+    agregarPortafolio: async (archivo) => {
+      if (!archivo.type.startsWith("image/")) throw new Error("Elige una imagen");
+      if (archivo.size > 8 * 1024 * 1024) throw new Error("La foto debe pesar menos de 8 MB");
+      const yo = d.socias.find((s) => s.id === uidRef.current);
+      if ((yo?.portafolio.length ?? 0) >= 12) throw new Error("Máximo 12 fotos");
+      const ruta = `${uidRef.current}/trabajo-${Date.now()}.${archivo.name.split(".").pop() || "jpg"}`;
+      const { error } = await sb.storage.from("fotos").upload(ruta, archivo);
+      falla(error);
+      await rpc("set_portafolio", { p_fotos: [...(yo?.portafolio ?? []), sb.storage.from("fotos").getPublicUrl(ruta).data.publicUrl] });
+    },
+    quitarPortafolio: async (url) => {
+      const yo = d.socias.find((s) => s.id === uidRef.current);
+      await rpc("set_portafolio", { p_fotos: (yo?.portafolio ?? []).filter((u) => u !== url) });
+    },
+    participarPromo: async (id, participar) => { await rpc("participar_promo", { p_promo: id, p_participar: participar }); },
+    guardarPromo: async (p) => {
+      const fila = { titulo: p.titulo.trim(), descripcion: p.descripcion?.trim() || null, descuento_pct: p.descuentoPct, activa: p.activa };
+      const { error } = p.id ? await sb.from("promociones").update(fila).eq("id", p.id) : await sb.from("promociones").insert(fila);
+      falla(error);
+      await cargar();
     },
     reiniciar: () => {},
   };

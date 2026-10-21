@@ -1,6 +1,7 @@
 // Tipos de dominio. Pensados para mapear 1:1 con las tablas de Supabase más adelante.
 
-export type ServicioId = "limpieza" | "gasfiteria" | "electricidad" | "lavado_autos" | "piscinas";
+export type ServicioId = "limpieza" | "gasfiteria" | "electricidad" | "lavado_autos" | "piscinas" | "belleza";
+export type Rubro = "hogar" | "belleza";
 
 export interface Servicio {
   id: ServicioId;
@@ -11,7 +12,9 @@ export interface Servicio {
   precioHora: number; // soles
   horasMin: number;
   recargoMateriales: number; // soles fijos si la socia lleva materiales
-  tareas: string[]; // lo que el cliente puede marcar ("Cocina", "Baños"…)
+  tareas: string[]; // lo que el cliente puede marcar ("Cocina", "Baños"…). En belleza: "Uñas · Manicure gel"
+  rubro: Rubro;
+  cotizar: boolean; // true = la clienta pide cotización y las socias ofertan su precio
 }
 
 export type EstadoPedido = "buscando" | "aceptado" | "en_camino" | "en_curso" | "terminado" | "cancelado";
@@ -50,6 +53,9 @@ export interface Pedido {
   tareasHechas: string[]; // lo que la socia ya marcó como hecho
   fotos: FotoServicio[]; // antes y después (rutas en un bucket privado)
   sociaPreferida?: string; // "volver a pedir con…": se le avisa primero
+  modalidad: "domicilio" | "local"; // belleza: la socia va a la casa o la clienta va a su local
+  promoId?: string;
+  ofertaId?: string; // oferta elegida (pedidos por cotización)
   motivoCancelacion?: string;
   comisionPct: number;
   pago: { metodo?: MetodoPago; estado: EstadoPago };
@@ -113,7 +119,16 @@ export interface Socia {
   serviciosHechos: number;
   horario: Horario;
   verificado?: boolean;
+  local?: { direccion: string; distrito: string }; // belleza: su local físico
+  portafolio: string[]; // fotos de sus trabajos (públicas)
+  promos: string[]; // promociones en las que participa (solo la propia socia y el equipo)
 }
+
+/** Oferta de una socia a un pedido por cotización. detalle = adicionales con su precio (incluidos en precio). */
+export interface Oferta { id: string; pedidoId: string; sociaId: string; precio: number; detalle: { nombre: string; precio: number }[]; mensaje?: string; creadoEn: string }
+
+/** Promoción de Una Manito: solo la ven las socias que aceptaron participar. */
+export interface Promocion { id: string; titulo: string; descripcion?: string; descuentoPct: number; activa: boolean }
 
 /** Días y horas en que la socia trabaja: {"1": [8, 18]} con 1 = lunes … 7 = domingo. Vacío = siempre. */
 export type Horario = Partial<Record<"1" | "2" | "3" | "4" | "5" | "6" | "7", [number, number]>>;

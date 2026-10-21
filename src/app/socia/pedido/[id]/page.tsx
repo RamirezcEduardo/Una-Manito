@@ -6,13 +6,21 @@ import { Chat, FotosServicio, TareasServicio } from "@/components/Servicio";
 import { Cabecera, Contactar, EstadoBadge, Estrellas, FormCalificar, Pantalla, accion } from "@/components/ui";
 import { comisionDe, ETIQUETA_ESTADO, FRECUENCIAS, formatoFecha, gananciaSocia, pagoCliente, parteUnaManito, SIGUIENTE_ESTADO, soles } from "@/lib/config";
 import { useDatos } from "@/lib/store";
+import { useRubro } from "@/lib/rubro";
+import { ListaBelleza } from "@/components/Belleza";
 
 const BOTON = { aceptado: "🛵 Voy en camino", en_camino: "✨ Llegué, empezar servicio", en_curso: "✅ Terminé el servicio" } as const;
+// La clienta va al local de la socia.
+const BOTON_LOCAL = { aceptado: "👋 Confirmar: la espero en mi local", en_camino: "✨ Llegó, empezar servicio", en_curso: "✅ Terminé el servicio" } as const;
 
 export default function PedidoSocia({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { pedidos, clientes, avanzarPedido, confirmarPago, calificar, listo } = useDatos();
+  const { pedidos, clientes, avanzarPedido, confirmarPago, calificar, listo, config, socias } = useDatos();
   const p = pedidos.find((x) => x.id === id);
+  const servicio = config.servicios.find((x) => x.id === p?.servicio);
+  const cotizar = !!servicio?.cotizar;
+  const enLocal = p?.modalidad === "local";
+  useRubro(servicio?.rubro);
   if (!listo) return null;
   if (!p) return (<><Cabecera titulo="Pedido" volver="/socia" /><Pantalla><p>Pedido no encontrado.</p></Pantalla></>);
   const cliente = clientes.find((c) => c.id === p.clienteId);
@@ -24,19 +32,24 @@ export default function PedidoSocia({ params }: { params: Promise<{ id: string }
       <Cabecera titulo="Servicio" volver="/socia" />
       <Pantalla>
         <div className="tarjeta flex items-center justify-between"><b>Estado</b><EstadoBadge estado={p.estado} /></div>
-        <CompartirUbicacion pedido={p} />
+        {!enLocal && <CompartirUbicacion pedido={p} />}
         <div className="tarjeta space-y-2">
           <p className="text-lg font-bold">👤 {cliente?.nombre} {cliente?.verificado && <span className="ml-1 rounded-full bg-green-100 px-2 py-0.5 align-middle text-xs font-bold text-green-800">✅ Verificado</span>}</p>
           {cliente && !["terminado", "cancelado"].includes(p.estado) && (
             <Contactar telefono={cliente.telefono} mensaje={`Hola ${cliente.nombre.split(" ")[0]}, soy tu socia de Una Manito para el servicio en ${p.ubicacion.direccion}.`} />
           )}
+          {enLocal ? (
+            <p className="rounded-xl bg-marca-claro p-3 font-semibold">📍 La clienta irá a tu local: {socias.find((s) => s.id === p.sociaId)?.local?.direccion ?? "tu local"}</p>
+          ) : <>
           <Mapa lat={p.ubicacion.lat} lng={p.ubicacion.lng} alto={180} />
           <p>📍 {p.ubicacion.direccion}, {p.ubicacion.distrito}</p>
           {p.ubicacion.referencia && <p className="text-suave">Ref: {p.ubicacion.referencia}</p>}
           <a className="font-semibold text-marca" target="_blank" href={`https://www.google.com/maps/dir/?api=1&destination=${p.ubicacion.lat},${p.ubicacion.lng}`}>🧭 Cómo llegar</a>
+          </>}
+          {cotizar && <div className="rounded-xl bg-marca-claro p-3"><p className="font-bold">✨ La clienta pidió:</p><ListaBelleza tareas={p.tareas} /></div>}
           <p>🕒 {formatoFecha(p.fecha)}{p.frecuencia !== "unica" && <b className="text-green-700"> · 🔁 {FRECUENCIAS.find((f) => f.id === p.frecuencia)?.texto.toLowerCase()}</b>}</p>
-          <p>⏱️ {p.horas} h · 🧴 {p.conMateriales ? "Llevas tus materiales" : "Materiales del cliente"}</p>
-          {p.tareas.length > 0 && (
+          {!cotizar && <p>⏱️ {p.horas} h · 🧴 {p.conMateriales ? "Llevas tus materiales" : "Materiales del cliente"}</p>}
+          {!cotizar && p.tareas.length > 0 && (
             <div className="rounded-xl bg-marca-claro p-3">
               <p className="font-bold">✅ El cliente pidió:</p>
               <ul className="mt-1 grid grid-cols-2 gap-x-3">{p.tareas.map((t) => <li key={t}>• {t}</li>)}</ul>
@@ -47,6 +60,7 @@ export default function PedidoSocia({ params }: { params: Promise<{ id: string }
         </div>
         <div className="tarjeta space-y-1">
           <div className="flex justify-between"><span>Total del servicio</span><span>{soles(p.total)}</span></div>
+          {cotizar && p.descuento > 0 && <div className="flex justify-between text-sm text-suave"><span>🎁 Ya incluye la promoción</span><span>− {soles(p.descuento)}</span></div>}
           {p.recargo > 0 && <div className="flex justify-between text-sm text-green-700"><span>💰 Incluye pago extra por {p.fecha === "asap" ? "urgencia" : "fin de semana"}</span><span>{soles(p.recargo)}</span></div>}
           <div className="flex justify-between text-suave"><span>Comisión Una Manito ({p.comisionPct}%)</span><span>− {soles(comisionDe(p))}</span></div>
           {p.propina > 0 && <div className="flex justify-between font-semibold text-green-700"><span>Propina (100% tuya) 💚</span><span>+ {soles(p.propina)}</span></div>}
@@ -63,7 +77,7 @@ export default function PedidoSocia({ params }: { params: Promise<{ id: string }
         <FotosServicio pedido={p} editable />
         {cliente && <Chat pedido={p} otroNombre={cliente.nombre} />}
 
-        {sig && <button className="btn-primario py-6 text-xl" onClick={() => accion(() => avanzarPedido(p.id))}>{BOTON[p.estado as keyof typeof BOTON] ?? ETIQUETA_ESTADO[sig].texto}</button>}
+        {sig && <button className="btn-primario py-6 text-xl" onClick={() => accion(() => avanzarPedido(p.id))}>{(enLocal ? BOTON_LOCAL : BOTON)[p.estado as keyof typeof BOTON] ?? ETIQUETA_ESTADO[sig].texto}</button>}
 
         {p.estado === "terminado" && (
           p.pago.estado === "confirmado" ? <div className="tarjeta bg-green-50 font-bold text-green-800">✅ Pago recibido ({p.pago.metodo})</div>

@@ -1,7 +1,7 @@
 "use client";
 // Contrato de la capa de datos: lo implementan el modo demo (store.tsx) y Supabase (store-supabase.tsx).
 import { createContext } from "react";
-import type { Calificacion, Cliente, Config, DatosPersonales, Horario, Mensaje, Verificacion, MetodoPago, Pedido, Reclamacion, Socia, VerificacionSocia } from "./tipos";
+import type { Calificacion, Cliente, Config, DatosPersonales, Horario, Mensaje, Oferta, Promocion, Verificacion, MetodoPago, Pedido, Reclamacion, ServicioId, Socia, VerificacionSocia } from "./tipos";
 
 export type Rol = "cliente" | "socia" | "admin" | "ceo";
 export interface Sesion { rol: Rol; id: string }
@@ -30,11 +30,14 @@ export interface Datos {
   mensajes: Mensaje[];
   /** Pruebas de vida: el equipo ve todas; cada persona, la suya. */
   verificaciones: Verificacion[];
+  /** Ofertas de cotización: la clienta ve las de sus pedidos; la socia, las suyas. */
+  ofertas: Oferta[];
+  promociones: Promocion[];
 }
 
-export type NuevoPedido = Omit<Pedido, "id" | "estado" | "pago" | "creadoEn" | "clienteId" | "comisionPct" | "propina" | "motivoCancelacion" | "cargoServicio" | "liquidado" | "planOrigen" | "tareasHechas" | "fotos">;
+export type NuevoPedido = Omit<Pedido, "id" | "estado" | "pago" | "creadoEn" | "clienteId" | "comisionPct" | "propina" | "motivoCancelacion" | "cargoServicio" | "liquidado" | "planOrigen" | "tareasHechas" | "fotos" | "ofertaId">;
 export type NuevaReclamacion = Omit<Reclamacion, "id" | "numero" | "creadoEn" | "respuesta" | "respondidoEn">;
-export type NuevaSocia = Omit<Socia, "id" | "estado" | "disponible" | "calificacion" | "serviciosHechos" | "horario" | "foto" | "dni" | "personal" | "verificacion"> & {
+export type NuevaSocia = Omit<Socia, "id" | "estado" | "disponible" | "calificacion" | "serviciosHechos" | "horario" | "foto" | "dni" | "personal" | "verificacion" | "local" | "portafolio" | "promos"> & {
   foto: File | string;
   personal: DatosPersonales;
   verificacion: Omit<VerificacionSocia, "dniFrente" | "dniReverso">;
@@ -105,6 +108,18 @@ export interface Api extends Datos {
   verVideoVerificacion: (ruta: string) => Promise<string>;
   /** Guarda la suscripción push de este dispositivo para el usuario actual. */
   guardarSuscripcion: (s: { endpoint: string; p256dh: string; auth: string }) => Promise<void>;
+  /** Socia: oferta (o actualiza) su precio para un pedido por cotización. */
+  ofertar: (pedidoId: string, precio: number, detalle: Oferta["detalle"], mensaje: string) => Promise<void>;
+  /** Clienta: elige una oferta; el pedido queda aceptado con ese precio. */
+  elegirOferta: (ofertaId: string) => Promise<void>;
+  setMisServicios: (servicios: ServicioId[]) => Promise<void>;
+  setLocal: (direccion: string, distrito: string) => Promise<void>;
+  /** Agrega (archivo) o quita (url) una foto del portafolio. */
+  agregarPortafolio: (archivo: File) => Promise<void>;
+  quitarPortafolio: (url: string) => Promise<void>;
+  participarPromo: (promoId: string, participar: boolean) => Promise<void>;
+  /** Equipo: crea o edita una promoción. */
+  guardarPromo: (p: Omit<Promocion, "id"> & { id?: string }) => Promise<void>;
   reiniciar: () => void; // solo demo
 }
 

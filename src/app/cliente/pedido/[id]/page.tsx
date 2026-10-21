@@ -9,6 +9,8 @@ import { BuscandoSocia, MapaServicio, SociaAcepto } from "@/components/Radar";
 import { Avatar, Cabecera, Contactar, EstadoBadge, Estrellas, FormCalificar, NivelBadge, Pantalla, accion } from "@/components/ui";
 import { FRECUENCIAS, formatoFecha, MOTIVOS_CANCELACION, PROPINAS, soles } from "@/lib/config";
 import { useDatos } from "@/lib/store";
+import { useRubro } from "@/lib/rubro";
+import { ListaBelleza, LocalSocia, OfertasRecibidas, PerfilSocia } from "@/components/Belleza";
 import type { EstadoPedido, MetodoPago } from "@/lib/tipos";
 
 const PASOS: EstadoPedido[] = ["buscando", "aceptado", "en_camino", "en_curso", "terminado"];
@@ -24,6 +26,10 @@ export default function DetallePedido({ params }: { params: Promise<{ id: string
   const { id } = use(params);
   const { pedidos, socias, config, cancelarPedido, marcarPagado, calificar, detenerPlan, listo, seguimiento } = useDatos();
   const p = pedidos.find((x) => x.id === id);
+  const servicio = config.servicios.find((x) => x.id === p?.servicio);
+  const cotizar = !!servicio?.cotizar;
+  useRubro(servicio?.rubro);
+  const [verPerfil, setVerPerfil] = useState(false);
   const [cancelando, setCancelando] = useState(false);
   const [paciencia, setPaciencia] = useState(false); // "Seguir esperando"
   const minutosBuscando = useMinutosDesde(p?.estado === "buscando" ? p.creadoEn : undefined);
@@ -31,9 +37,9 @@ export default function DetallePedido({ params }: { params: Promise<{ id: string
   const estadoAnterior = useRef(p?.estado);
   const [celebrar, setCelebrar] = useState(false);
   useEffect(() => {
-    if (estadoAnterior.current === "buscando" && p?.estado === "aceptado") { setCelebrar(true); sonarCelebracion(); }
+    if (estadoAnterior.current === "buscando" && p?.estado === "aceptado" && !cotizar) { setCelebrar(true); sonarCelebracion(); }
     estadoAnterior.current = p?.estado;
-  }, [p?.estado]);
+  }, [p?.estado, cotizar]);
   if (!listo) return null;
   if (!p) return (<><Cabecera titulo="Pedido" volver="/cliente" /><Pantalla><p>No encontramos este pedido.</p></Pantalla></>);
   const socia = socias.find((s) => s.id === p.sociaId);
@@ -58,10 +64,11 @@ export default function DetallePedido({ params }: { params: Promise<{ id: string
           {p.estado === "cancelado" && p.motivoCancelacion && <p className="text-center text-suave">Motivo: {p.motivoCancelacion}</p>}
         </div>
 
-        {p.estado === "buscando" && <ActivarAvisos texto="Avísame cuando una socia acepte (aunque cierre la app)" />}
-        {p.estado === "buscando" && <BuscandoSocia pedido={p} disponibles={socias.filter((s) => s.estado === "aprobada" && s.disponible && s.distritos.includes(p.ubicacion.distrito) && s.servicios.includes(p.servicio)).length} />}
+        {p.estado === "buscando" && !cotizar && <ActivarAvisos texto="Avísame cuando una socia acepte (aunque cierre la app)" />}
+        {p.estado === "buscando" && cotizar && <OfertasRecibidas pedido={p} />}
+        {p.estado === "buscando" && !cotizar && <BuscandoSocia pedido={p} disponibles={socias.filter((s) => s.estado === "aprobada" && s.disponible && s.distritos.includes(p.ubicacion.distrito) && s.servicios.includes(p.servicio)).length} />}
 
-        {p.estado === "buscando" && minutosBuscando >= 20 && !paciencia && (
+        {p.estado === "buscando" && !cotizar && minutosBuscando >= 20 && !paciencia && (
           <div className="tarjeta space-y-3 border-2 border-acento">
             <h3 className="text-lg font-bold">⏳ Aún no encontramos socia</h3>
             <p className="text-suave">Llevamos {minutosBuscando} minutos buscando. A veces a estas horas hay menos socias disponibles.</p>
@@ -70,7 +77,8 @@ export default function DetallePedido({ params }: { params: Promise<{ id: string
           </div>
         )}
 
-        {socia && <MapaServicio pedido={p} socia={socia} gps={seguimiento[p.id]} />}
+        {socia && p.modalidad === "local" && !["terminado", "cancelado"].includes(p.estado) && <LocalSocia socia={socia} />}
+        {socia && p.modalidad !== "local" && <MapaServicio pedido={p} socia={socia} gps={seguimiento[p.id]} />}
 
         {socia && (
           <div className="tarjeta space-y-3">
@@ -80,6 +88,7 @@ export default function DetallePedido({ params }: { params: Promise<{ id: string
               <p className="text-lg font-bold">{socia.nombre}</p>
               <NivelBadge socia={socia} />
               <p className="text-suave">⭐ {socia.calificacion > 0 ? socia.calificacion.toFixed(1) : "Nueva"} · {socia.serviciosHechos} servicios</p>
+              {cotizar && <button className="text-sm font-semibold text-marca" onClick={() => setVerPerfil(true)}>👀 Ver sus trabajos</button>}
             </div>
           </div>
           {!["terminado", "cancelado"].includes(p.estado) && (
@@ -94,16 +103,18 @@ export default function DetallePedido({ params }: { params: Promise<{ id: string
 
         <div className="tarjeta space-y-2">
           {["terminado", "cancelado"].includes(p.estado) && <Mapa lat={p.ubicacion.lat} lng={p.ubicacion.lng} alto={160} />}
-          <p>📍 {p.ubicacion.direccion}, {p.ubicacion.distrito}</p>
-          <p>🕒 {formatoFecha(p.fecha)} · {p.horas} h</p>
-          <p>🧴 {p.conMateriales ? "La socia lleva materiales" : "Materiales de la casa"}</p>
-          {p.tareas.length > 0 && <p>✅ {p.tareas.join(", ")}</p>}
+          {cotizar ? <ListaBelleza tareas={p.tareas} /> : null}
+          <p>{cotizar && p.modalidad === "local" ? "📍 En el local de la especialista" : `📍 ${p.ubicacion.direccion}, ${p.ubicacion.distrito}`}</p>
+          <p>🕒 {formatoFecha(p.fecha)}{cotizar ? "" : ` · ${p.horas} h`}</p>
+          {!cotizar && <p>🧴 {p.conMateriales ? "La socia lleva materiales" : "Materiales de la casa"}</p>}
+          {!cotizar && p.tareas.length > 0 && <p>✅ {p.tareas.join(", ")}</p>}
           {p.notas && <p>📝 {p.notas}</p>}
           {p.frecuencia !== "unica" && <p className="font-semibold text-green-700">🔁 Plan {FRECUENCIAS.find((f) => f.id === p.frecuencia)?.texto.toLowerCase()} con la misma socia</p>}
           {p.recargo > 0 && <p className="text-sm text-suave">Incluye recargo de {soles(p.recargo)}</p>}
-          {p.descuento > 0 && <p className="text-sm text-green-700">Incluye descuento por plan de {soles(p.descuento)}</p>}
-          {p.cargoServicio > 0 && <p className="text-sm text-suave">Servicio {soles(p.total)} + cargo de servicio {soles(p.cargoServicio)}</p>}
-          <p className="text-xl font-extrabold">Total: {soles(p.total + p.cargoServicio)}</p>
+          {p.descuento > 0 && <p className="text-sm text-green-700">Incluye descuento {cotizar ? "de la promoción" : "por plan"} de {soles(p.descuento)}</p>}
+          {p.cargoServicio > 0 && p.total > 0 && <p className="text-sm text-suave">Servicio {soles(p.total)} + cargo de servicio {soles(p.cargoServicio)}</p>}
+          {cotizar && p.estado === "buscando" ? <p className="font-bold">💌 El precio lo pone la especialista que elijas</p>
+            : <p className="text-xl font-extrabold">Total: {soles(p.total + p.cargoServicio)}</p>}
           {p.propina > 0 && <p className="font-semibold text-green-700">+ Propina para tu socia: {soles(p.propina)} 💚</p>}
         </div>
 
@@ -145,6 +156,7 @@ export default function DetallePedido({ params }: { params: Promise<{ id: string
           </div>
         )}
       </Pantalla>
+      {verPerfil && socia && <PerfilSocia socia={socia} onCerrar={() => setVerPerfil(false)} />}
       {celebrar && socia && <SociaAcepto socia={socia} onCerrar={() => setCelebrar(false)} />}
       <BotonWhatsApp mensaje={`Hola Una Manito, tengo una consulta sobre mi pedido ${p.id.slice(0, 8)}.`} />
     </>

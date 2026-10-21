@@ -1,14 +1,21 @@
 import type { Config, EstadoPedido, Frecuencia, Horario, Servicio } from "./tipos";
 
+// Valores comunes a los servicios del hogar (por horas).
+const HOGAR = { rubro: "hogar", cotizar: false } as const;
+
 export const ESLOGAN_CLIENTE = "Te damos una manito, al toque."; // general; cada servicio tiene el suyo
 export const ESLOGAN_SOCIA = "Te damos una manito para crecer.";
 
 export const SERVICIOS_INICIALES: Servicio[] = [
-  { id: "limpieza", nombre: "Limpieza del hogar", icono: "🧹", eslogan: "Te damos una manito en tu hogar, al toque.", activo: true, precioHora: 15, horasMin: 3, recargoMateriales: 10, tareas: ["Cocina", "Baños", "Dormitorios", "Sala y comedor", "Pisos", "Ventanas por dentro", "Planchado", "Lavado de ropa"] },
-  { id: "gasfiteria", nombre: "Gasfitería", icono: "🔧", eslogan: "Te damos una manito con tus caños, al toque.", activo: false, precioHora: 35, horasMin: 1, recargoMateriales: 0, tareas: [] },
-  { id: "electricidad", nombre: "Electricidad", icono: "💡", eslogan: "Te damos una manito con la luz, al toque.", activo: false, precioHora: 35, horasMin: 1, recargoMateriales: 0, tareas: [] },
-  { id: "lavado_autos", nombre: "Lavado de autos", icono: "🚗", eslogan: "Te damos una manito con tu auto, al toque.", activo: false, precioHora: 25, horasMin: 1, recargoMateriales: 5, tareas: [] },
-  { id: "piscinas", nombre: "Limpieza de piscinas", icono: "🏊", eslogan: "Te damos una manito con tu piscina, al toque.", activo: false, precioHora: 30, horasMin: 2, recargoMateriales: 15, tareas: [] },
+  { ...HOGAR, id: "limpieza", nombre: "Limpieza del hogar", icono: "🧹", eslogan: "Te damos una manito en tu hogar, al toque.", activo: true, precioHora: 15, horasMin: 3, recargoMateriales: 10, tareas: ["Cocina", "Baños", "Dormitorios", "Sala y comedor", "Pisos", "Ventanas por dentro", "Planchado", "Lavado de ropa"] },
+  { ...HOGAR, id: "gasfiteria", nombre: "Gasfitería", icono: "🔧", eslogan: "Te damos una manito con tus caños, al toque.", activo: false, precioHora: 35, horasMin: 1, recargoMateriales: 0, tareas: [] },
+  { ...HOGAR, id: "electricidad", nombre: "Electricidad", icono: "💡", eslogan: "Te damos una manito con la luz, al toque.", activo: false, precioHora: 35, horasMin: 1, recargoMateriales: 0, tareas: [] },
+  { ...HOGAR, id: "lavado_autos", nombre: "Lavado de autos", icono: "🚗", eslogan: "Te damos una manito con tu auto, al toque.", activo: false, precioHora: 25, horasMin: 1, recargoMateriales: 5, tareas: [] },
+  { id: "belleza", nombre: "Belleza", icono: "💅", eslogan: "Te damos una manito para verte linda, al toque.", activo: true, precioHora: 0, horasMin: 1, recargoMateriales: 0, rubro: "belleza", cotizar: true, tareas: [
+    "Uñas · Manicure clásica", "Uñas · Manicure gel", "Uñas · Uñas acrílicas", "Uñas · Polygel", "Uñas · Pedicure clásica", "Uñas · Pedicure spa", "Uñas · Retiro de gel o acrílico",
+    "Pestañas · Extensiones pelo a pelo", "Pestañas · Extensiones volumen", "Pestañas · Lifting de pestañas", "Pestañas · Retoque de extensiones",
+    "Cejas · Perfilado", "Cejas · Laminado", "Cejas · Henna"] },
+  { ...HOGAR, id: "piscinas", nombre: "Limpieza de piscinas", icono: "🏊", eslogan: "Te damos una manito con tu piscina, al toque.", activo: false, precioHora: 30, horasMin: 2, recargoMateriales: 15, tareas: [] },
 ];
 
 // Los 43 distritos de Lima Metropolitana y los 7 del Callao (también sirven para reconocer el distrito de un punto del mapa).
@@ -131,3 +138,14 @@ export const LIMA = { lat: -12.0931, lng: -77.0465 };
 /** "sáb 4 oct, 9:00 a. m." — o "Lo antes posible". */
 export const formatoFecha = (f: string) =>
   f === "asap" ? "Lo antes posible" : new Date(f).toLocaleString("es-PE", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+
+/** Grupos de un servicio por cotización: "Uñas · Manicure gel" → { Uñas: ["Manicure gel"] }. */
+export function agruparTareas(tareas: string[]) {
+  const grupos: Record<string, string[]> = {};
+  for (const t of tareas) { const [g, n] = t.includes(" · ") ? t.split(" · ") : ["Otros", t]; (grupos[g] ??= []).push(n); }
+  return grupos;
+}
+export const ICONO_GRUPO: Record<string, string> = { "Uñas": "💅", "Pestañas": "👁️", "Cejas": "✨" };
+
+/** Adicionales que la socia puede sumar a su oferta (cada una pone su precio). */
+export const ADICIONALES_BELLEZA = ["Nail art", "Cristales o piedras", "Francés", "Efecto espejo o cromo", "Parafina", "Exfoliación de pies", "Masaje de manos", "Reparación de uña", "Tinte de pestañas", "Diseño de cejas"];

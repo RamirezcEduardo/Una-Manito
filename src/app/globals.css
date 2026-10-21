@@ -11,7 +11,18 @@
   --color-fondo: #fbfaf7;
 }
 
+/* Belleza: la app entera cambia a rosado (logo opción C). */
+:root[data-rubro="belleza"] {
+  --color-marca: #db2777;
+  --color-marca-oscuro: #be185d;
+  --color-marca-claro: #fce7f3;
+  --color-acento: #f59e0b;
+  --color-acento-claro: #fef3c7;
+  --color-fondo: #fdf2f8;
+}
+
 body {
+  transition: background-color .4s;
   background: var(--color-fondo);
   color: var(--color-tinta);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;

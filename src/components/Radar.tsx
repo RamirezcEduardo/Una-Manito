@@ -93,18 +93,28 @@ export function AlertaPedido({ pedido, servicio, onAceptar, onCerrar }: { pedido
       <div className="alerta-subir mx-auto w-full max-w-md overflow-hidden rounded-t-3xl bg-white sm:rounded-3xl">
         <div className="bg-acento px-5 py-3 text-center">
           <p className="text-sm font-bold uppercase tracking-wide text-tinta/70">¡Nuevo pedido!</p>
-          <p className="text-4xl font-black text-tinta">{soles(gananciaSocia(pedido))}</p>
-          <p className="text-sm font-semibold text-tinta/80">es lo que tú ganas</p>
+          {servicio?.cotizar ? <>
+            <p className="text-3xl font-black text-tinta">💌 Piden cotización</p>
+            <p className="text-sm font-semibold text-tinta/80">tú pones tu precio</p>
+          </> : <>
+            <p className="text-4xl font-black text-tinta">{soles(gananciaSocia(pedido))}</p>
+            <p className="text-sm font-semibold text-tinta/80">es lo que tú ganas</p>
+          </>}
         </div>
         <div className="space-y-2 p-5">
           <p className="text-xl font-extrabold">{servicio?.icono} {servicio?.nombre ?? "Servicio"}</p>
           <p className="text-lg">📍 <b>{pedido.ubicacion.distrito}</b></p>
-          <p>🕒 {formatoFecha(pedido.fecha)} · ⏱️ {pedido.horas} h</p>
-          <p>🧴 {pedido.conMateriales ? "Llevas tus materiales" : "Materiales del cliente"}</p>
+          {servicio?.cotizar ? <>
+            <p>🕒 {formatoFecha(pedido.fecha)} · {pedido.modalidad === "local" ? "📍 En tu local" : "🏠 A domicilio"}</p>
+            <p className="text-sm">✨ {pedido.tareas.join(", ")}</p>
+          </> : <>
+            <p>🕒 {formatoFecha(pedido.fecha)} · ⏱️ {pedido.horas} h</p>
+            <p>🧴 {pedido.conMateriales ? "Llevas tus materiales" : "Materiales del cliente"}</p>
+          </>}
           {pedido.recargo > 0 && <p className="inline-block rounded-full bg-green-100 px-3 py-1 text-sm font-bold text-green-800">💰 Incluye pago extra</p>}
           {pedido.sociaPreferida && <p className="inline-block rounded-full bg-acento-claro px-3 py-1 text-sm font-bold text-amber-900">💛 Te eligió a ti</p>}
           {pedido.frecuencia !== "unica" && <p className="inline-block rounded-full bg-green-100 px-3 py-1 text-sm font-bold text-green-800">🔁 Cliente fijo</p>}
-          <button className="alerta-latido btn-acento mt-2 py-5 text-xl" onClick={onAceptar}>Aceptar pedido</button>
+          <button className="alerta-latido btn-acento mt-2 py-5 text-xl" onClick={onAceptar}>{servicio?.cotizar ? "Ver y cotizar" : "Aceptar pedido"}</button>
           <div className="h-2 overflow-hidden rounded-full bg-gray-100">
             <div className="h-full bg-acento transition-all duration-1000 ease-linear" style={{ width: `${(quedan / SEGUNDOS) * 100}%` }} />
           </div>

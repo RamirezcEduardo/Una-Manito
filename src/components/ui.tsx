@@ -5,6 +5,7 @@ import { useState, type ReactNode } from "react";
 import { ETIQUETA_ESTADO, nivelSocia } from "@/lib/config";
 import type { Calificacion, EstadoPedido } from "@/lib/tipos";
 import { useDatos } from "@/lib/store";
+import { LOGO, useRubro } from "@/lib/rubro";
 
 /**
  * Ejecuta una acción y muestra el error en palabras simples si falla.
@@ -90,13 +91,14 @@ export function NivelBadge({ socia }: { socia: { calificacion: number; servicios
 export function Cabecera({ titulo, volver }: { titulo: string; volver?: string }) {
   const { salir, sesion, sinPerfil } = useDatos();
   const router = useRouter();
+  const rubro = useRubro();
   return (
-    <header className="sticky top-0 z-[1000] flex items-center gap-3 bg-marca px-4 py-4 text-white shadow">
+    <header className="sticky top-0 z-[1000] flex items-center gap-3 bg-marca transition-colors duration-500 px-4 py-4 text-white shadow">
       {volver && (
         <Link href={volver} aria-label="Volver" className="text-2xl leading-none">←</Link>
       )}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/icono.svg" alt="" className="h-9 w-9 rounded-[10px] ring-2 ring-white/70" />
+      <img src={LOGO[rubro]} alt="" className="h-9 w-9 rounded-[10px] ring-2 ring-white/70" />
       <h1 className="flex-1 truncate text-xl font-extrabold">{titulo}</h1>
       {(sesion || sinPerfil) && <button onClick={async () => { await salir(); router.push("/"); }} className="rounded-full bg-white/20 px-3 py-1 text-sm font-semibold">Salir</button>}
     </header>

@@ -42,11 +42,11 @@ Deno.serve(async (req) => {
   if (!k.push_secreto || req.headers.get("x-secreto") !== k.push_secreto) return new Response("No autorizado", { status: 401 });
   webpush.setVapidDetails("mailto:hola@unamanito.com", k.vapid_publica, k.vapid_privada);
 
-  const { pedido_id, estado } = await req.json();
+  const { pedido_id, estado, socia_oferta } = await req.json();
   const { data: p } = await sb.from("pedidos").select("*").eq("id", pedido_id).single();
   if (!p) return new Response("Sin pedido", { status: 404 });
 
-  const { data: servicio } = await sb.from("servicios").select("nombre, icono").eq("id", p.servicio).single();
+  const { data: servicio } = await sb.from("servicios").select("nombre, icono, cotizar").eq("id", p.servicio).single();
   const nombreServicio = servicio ? `${servicio.icono} ${servicio.nombre}` : "Servicio";
   const { data: socia } = p.socia_id ? await sb.from("perfiles").select("nombre").eq("id", p.socia_id).single() : { data: null };
   const nombreSocia = socia?.nombre?.split(" ")[0] ?? "Tu socia";
@@ -57,14 +57,25 @@ Deno.serve(async (req) => {
     const { data: socias } = await sb.from("socias").select("id, distritos, servicios, horario")
       .eq("estado", "aprobada").eq("disponible", true).contains("distritos", [p.distrito]).contains("servicios", [p.servicio]);
     let ids = (socias ?? []).filter((s) => s.id !== p.cliente_id && enHorario(s.horario, p.fecha)).map((s) => s.id);
+    // Pedido con promoción: solo las socias que participan.
+    if (p.promo_id) {
+      const { data: parts } = await sb.from("promo_socias").select("socia_id").eq("promo_id", p.promo_id);
+      const dentro = new Set((parts ?? []).map((x) => x.socia_id));
+      ids = ids.filter((id) => dentro.has(id));
+    }
     // Si el cliente eligió a una socia, ella recibe el aviso primero.
     if (p.socia_preferida && ids.includes(p.socia_preferida)) ids = [p.socia_preferida];
     const gana = Number(p.total) - Math.round(Number(p.total) * Number(p.comision_pct)) / 100;
     enviados = await enviar(ids, {
       titulo: p.socia_preferida ? "💛 ¡Un cliente te eligió!" : "🔔 ¡Nuevo pedido cerca de ti!",
-      cuerpo: `${nombreServicio} · ${p.distrito} · ${horaLima(p.fecha)} · Ganas ${soles(gana)}`,
+      cuerpo: servicio?.cotizar ? `${nombreServicio} · ${p.distrito} · ${horaLima(p.fecha)} · Piden cotización: manda tu precio` : `${nombreServicio} · ${p.distrito} · ${horaLima(p.fecha)} · Ganas ${soles(gana)}`,
       url: "/socia",
     });
+  } else if (estado === "oferta" && p.estado === "buscando") {
+    const { data: quien } = await sb.from("perfiles").select("nombre").eq("id", socia_oferta).single();
+    enviados = await enviar([p.cliente_id], { titulo: "💌 ¡Tienes una nueva oferta!", cuerpo: `${quien?.nombre?.split(" ")[0] ?? "Una especialista"} te mandó su precio. Mira su perfil y sus trabajos.`, url: `/cliente/pedido/${p.id}` });
+  } else if (estado === "aceptado" && servicio?.cotizar && p.socia_id) {
+    enviados = await enviar([p.socia_id], { titulo: "🎉 ¡La clienta te eligió!", cuerpo: `${nombreServicio} · ${horaLima(p.fecha)} · ${soles(Number(p.total))}`, url: `/socia/pedido/${p.id}` });
   } else if (["aceptado", "en_camino", "en_curso", "terminado"].includes(estado)) {
     const textos: Record<string, [string, string]> = {
       aceptado: [`🎉 ¡${nombreSocia} aceptó tu pedido!`, `${nombreServicio} · ${horaLima(p.fecha)}`],

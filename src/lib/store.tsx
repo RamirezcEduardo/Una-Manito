@@ -19,12 +19,14 @@ const CLIENTES_DEMO = [
   { id: "c6", nombre: "Ricardo Vega", telefono: "987111005" },
 ];
 const SOCIAS_DEMO: Datos["socias"] = [
-  { id: "s1", nombre: "Rosa Quispe", telefono: "912345678", dni: "45678912", foto: "", distritos: ["Miraflores", "Surco", "Barranco"], servicios: ["limpieza"], estado: "aprobada", disponible: true, calificacion: 4.9, serviciosHechos: 132, horario: { "1": [8, 18], "2": [8, 18], "3": [8, 18], "4": [8, 18], "5": [8, 18], "6": [9, 14] } },
-  { id: "s2", nombre: "Carmen Huamán", telefono: "923456789", dni: "41234567", foto: "", distritos: ["San Isidro", "Lince"], servicios: ["limpieza"], estado: "pendiente", disponible: false, calificacion: 0, serviciosHechos: 0, horario: {}, verificado: false,
+  { id: "s1", nombre: "Rosa Quispe", telefono: "912345678", dni: "45678912", foto: "", distritos: ["Miraflores", "Surco", "Barranco"], servicios: ["limpieza"], estado: "aprobada", disponible: true, calificacion: 4.9, serviciosHechos: 132, portafolio: [], promos: [], horario: { "1": [8, 18], "2": [8, 18], "3": [8, 18], "4": [8, 18], "5": [8, 18], "6": [9, 14] } },
+  { id: "s2", nombre: "Carmen Huamán", telefono: "923456789", dni: "41234567", foto: "", distritos: ["San Isidro", "Lince"], servicios: ["limpieza"], estado: "pendiente", disponible: false, calificacion: 0, serviciosHechos: 0, portafolio: [], promos: [], horario: {}, verificado: false,
     personal: { tipoDocumento: "DNI", documento: "41234567", fechaNacimiento: "1988-04-12" },
     verificacion: { direccion: "Jr. Huáscar 456", distritoResidencia: "Jesús María", emergenciaNombre: "Pedro Huamán", emergenciaParentesco: "Hermano/a", emergenciaTelefono: "923000111", cobroNumero: "923456789", experiencia: "De 3 a 5 años", dniFrente: "/icono-512.png", dniReverso: "/icono-512.png", declaraSinAntecedentes: true } },
-  { id: "s3", nombre: "Elena Mamani", telefono: "934567890", dni: "42345678", foto: "", distritos: ["San Isidro", "San Borja", "Surco"], servicios: ["limpieza"], estado: "aprobada", disponible: false, calificacion: 4.7, serviciosHechos: 24, horario: {} },
-  { id: "s4", nombre: "Julia Torres", telefono: "945678901", dni: "43456789", foto: "", distritos: ["Jesús María", "Lince", "Pueblo Libre"], servicios: ["limpieza"], estado: "aprobada", disponible: false, calificacion: 4.5, serviciosHechos: 8, horario: {} },
+  { id: "s3", nombre: "Elena Mamani", telefono: "934567890", dni: "42345678", foto: "", distritos: ["San Isidro", "San Borja", "Surco"], servicios: ["limpieza"], estado: "aprobada", disponible: false, calificacion: 4.7, serviciosHechos: 24, portafolio: [], promos: [], horario: {} },
+  { id: "s4", nombre: "Julia Torres", telefono: "945678901", dni: "43456789", foto: "", distritos: ["Jesús María", "Lince", "Pueblo Libre"], servicios: ["limpieza"], estado: "aprobada", disponible: false, calificacion: 4.5, serviciosHechos: 8, portafolio: [], promos: [], horario: {} },
+  { id: "s5", nombre: "Valeria Ríos", telefono: "956789012", dni: "47654321", foto: "", distritos: ["Miraflores", "Surco", "San Isidro", "Barranco"], servicios: ["belleza"], estado: "aprobada", disponible: true, calificacion: 4.9, serviciosHechos: 64, horario: {},
+    local: { direccion: "Av. Benavides 1200, int. 3", distrito: "Miraflores" }, portafolio: ["/icono-belleza.svg"], promos: ["promo1"] },
 ];
 const ZONAS: [string, number, number, string[]][] = [
   ["Miraflores", -12.1211, -77.0297, ["s1"]], ["Surco", -12.135, -76.995, ["s1", "s3"]], ["San Isidro", -12.097, -77.036, ["s3"]],
@@ -53,7 +55,7 @@ function semillaPedidos(): Pedido[] {
         ubicacion: { direccion: `Calle ${elegir(["Las Begonias", "Los Pinos", "Schell", "Benavides", "Pardo", "Javier Prado"])} ${100 + Math.floor(azar() * 900)}`, distrito, lat, lng },
         fecha: urgente ? "asap" : creado.toISOString(), horas, conMateriales, tareas: ["Cocina", "Baños", "Pisos"],
         estado: cancelado ? "cancelado" : "terminado", recargo, descuento: 0, cargoServicio: 0, frecuencia: "unica", liquidado: dia > 6, tareasHechas: [], fotos: [], total: base + recargo, propina: !cancelado && azar() < 0.35 ? elegir([5, 10, 20]) : 0,
-        comisionPct: 18, pago: cancelado ? { estado: "pendiente" } : { metodo: elegir(["yape", "plin", "efectivo"] as const), estado: "confirmado" },
+        modalidad: "domicilio", comisionPct: 18, pago: cancelado ? { estado: "pendiente" } : { metodo: elegir(["yape", "plin", "efectivo"] as const), estado: "confirmado" },
         motivoCancelacion: cancelado ? "Ya no lo necesito" : undefined,
         calificacionSocia: cancelado ? undefined : { estrellas: elegir([5, 5, 5, 4]) }, creadoEn: creado.toISOString(),
       });
@@ -80,6 +82,8 @@ const SEMILLA: Datos = {
   invitaciones: [{ email: "marketing@unamanito.pe", nombre: "Equipo de marketing", rol: "admin", creadoEn: new Date().toISOString() }],
   seguimiento: {},
   mensajes: [],
+  ofertas: [],
+  promociones: [{ id: "promo1", titulo: "Mes de la belleza", descripcion: "20% de descuento en tu primera cita de uñas, pestañas o cejas.", descuentoPct: 20, activa: true }],
   // Carmen (socia pendiente) ya envió su prueba de vida; el resto de la demo está verificado.
   verificaciones: [{ usuarioId: "s2", video: "/video/oficios.mp4", gesto: "Gira la cabeza a la derecha", estado: "pendiente", creadoEn: new Date(Date.now() - 3600e3).toISOString() }],
   reclamaciones: [{
@@ -89,7 +93,7 @@ const SEMILLA: Datos = {
   }],
 };
 
-const CLAVE = "una-manito-demo-v9";
+const CLAVE = "una-manito-demo-v10";
 const nuevoId = (p: string) => p + Math.random().toString(36).slice(2, 8);
 const SIGUIENTE: Partial<Record<EstadoPedido, EstadoPedido>> = { aceptado: "en_camino", en_camino: "en_curso", en_curso: "terminado" };
 
@@ -135,6 +139,8 @@ function DemoProvider({ children }: { children: ReactNode }) {
     seguimiento: d.seguimiento ?? {},
     mensajes: d.mensajes ?? [],
     verificaciones: d.verificaciones ?? [],
+    ofertas: d.ofertas ?? [],
+    promociones: d.promociones ?? [],
     listo,
     demo: true,
     sinPerfil: false,
@@ -161,7 +167,7 @@ function DemoProvider({ children }: { children: ReactNode }) {
       const extra = { personal, dni: personal.tipoDocumento === "DNI" ? personal.documento : undefined,
         verificacion: { ...verificacion, dniFrente: URL.createObjectURL(dniFrente), dniReverso: URL.createObjectURL(dniReverso) } };
       mod((x) => ({
-        ...x, socias: [...x.socias, { ...datos, ...extra, foto, id, estado: "pendiente", disponible: false, calificacion: 0, serviciosHechos: 0, horario: {}, verificado: false }],
+        ...x, socias: [...x.socias, { ...datos, ...extra, foto, id, portafolio: [], promos: [], estado: "pendiente", disponible: false, calificacion: 0, serviciosHechos: 0, horario: {}, verificado: false }],
         usuarios: [...x.usuarios, { id, nombre: s.nombre, telefono: s.telefono, rol: "socia", personal, creadoEn: new Date().toISOString() }], sesion: { rol: "socia", id },
       }));
     },
@@ -177,6 +183,7 @@ function DemoProvider({ children }: { children: ReactNode }) {
     aceptarPedido: async (pedidoId) => {
       const p = d.pedidos.find((x) => x.id === pedidoId);
       if (!p || p.estado !== "buscando") return false;
+      if (d.config.servicios.find((s) => s.id === p.servicio)?.cotizar) return false;
       modPedido(pedidoId, (p) => (p.estado === "buscando" ? { ...p, estado: "aceptado", sociaId: d.sesion!.id } : p));
       return true;
     },
@@ -276,6 +283,35 @@ function DemoProvider({ children }: { children: ReactNode }) {
       mod((x) => ({ ...x, socias: x.socias.map((y) => (y.id === id ? { ...y, estado } : y)) }));
     },
     guardarSuscripcion: async () => {},
+    ofertar: async (pedidoId, precio, detalle, mensaje) => {
+      if (!(precio > 0)) throw new Error("Escribe tu precio");
+      if (/\d{7,}|@|https?:|wa\.me|insta/i.test((mensaje + JSON.stringify(detalle)).replace(/[\s.-]/g, ""))) throw new Error("Por seguridad, no compartas teléfonos, redes ni enlaces. Podrán chatear al confirmar.");
+      const yo = d.sesion!.id;
+      mod((x) => ({ ...x, ofertas: [...(x.ofertas ?? []).filter((o) => !(o.pedidoId === pedidoId && o.sociaId === yo)),
+        { id: nuevoId("o"), pedidoId, sociaId: yo, precio, detalle, mensaje: mensaje.trim() || undefined, creadoEn: new Date().toISOString() }] }));
+    },
+    elegirOferta: async (ofertaId) => {
+      const o = (d.ofertas ?? []).find((x) => x.id === ofertaId);
+      if (!o) throw new Error("Oferta no encontrada");
+      modPedido(o.pedidoId, (p) => {
+        if (p.estado !== "buscando") return p;
+        const pct = d.promociones.find((x) => x.id === p.promoId)?.descuentoPct ?? 0;
+        const descuento = Math.round(o.precio * pct) / 100;
+        return { ...p, estado: "aceptado", sociaId: o.sociaId, ofertaId, descuento, total: Math.round((o.precio - descuento) * 100) / 100 };
+      });
+    },
+    setMisServicios: async (servicios) => mod((x) => ({ ...x, socias: x.socias.map((s) => (s.id === x.sesion?.id ? { ...s, servicios } : s)) })),
+    setLocal: async (direccion, distrito) => mod((x) => ({ ...x, socias: x.socias.map((s) => (s.id === x.sesion?.id ? { ...s, local: direccion.trim() ? { direccion: direccion.trim(), distrito } : undefined } : s)) })),
+    agregarPortafolio: async (archivo) => {
+      const url = URL.createObjectURL(archivo);
+      mod((x) => ({ ...x, socias: x.socias.map((s) => (s.id === x.sesion?.id ? { ...s, portafolio: [...s.portafolio, url].slice(0, 12) } : s)) }));
+    },
+    quitarPortafolio: async (url) => mod((x) => ({ ...x, socias: x.socias.map((s) => (s.id === x.sesion?.id ? { ...s, portafolio: s.portafolio.filter((u) => u !== url) } : s)) })),
+    participarPromo: async (id, participar) => mod((x) => ({ ...x, socias: x.socias.map((s) => (s.id === x.sesion?.id ? { ...s, promos: participar ? [...new Set([...s.promos, id])] : s.promos.filter((p) => p !== id) } : s)) })),
+    guardarPromo: async (p) => {
+      if (p.titulo.trim().length < 3) throw new Error("Escribe un título");
+      mod((x) => ({ ...x, promociones: p.id ? x.promociones.map((y) => (y.id === p.id ? { ...y, ...p, id: y.id } : y)) : [{ ...p, id: nuevoId("promo") }, ...x.promociones] }));
+    },
     reiniciar: () => setD(SEMILLA),
   };
 

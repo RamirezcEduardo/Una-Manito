@@ -5,19 +5,24 @@ import BuscadorDireccion from "@/components/BuscadorDireccion";
 import ElegirFecha, { errorFecha } from "@/components/ElegirFecha";
 import { Mapa } from "@/components/MapaDinamico";
 import { Cabecera, Opcion, Pantalla, accion } from "@/components/ui";
-import { calcularPrecio, DISTRITOS_CALLAO, DISTRITOS_LIMA_TODOS, FRECUENCIAS, formatoFecha, LIMA, soles } from "@/lib/config";
+import { agruparTareas, calcularPrecio, ICONO_GRUPO, DISTRITOS_CALLAO, DISTRITOS_LIMA_TODOS, FRECUENCIAS, formatoFecha, LIMA, soles } from "@/lib/config";
 import { direccionDePunto, emparejarDistrito, type Lugar } from "@/lib/geo";
 import { useDatos } from "@/lib/store";
 import { prepararSonido } from "@/lib/avisos";
+import { useRubro } from "@/lib/rubro";
 import type { Frecuencia, ServicioId } from "@/lib/tipos";
 
 function Formulario() {
-  const { config, crearPedido, socias } = useDatos();
+  const { config, crearPedido, socias, promociones } = useDatos();
   const router = useRouter();
   const params = useSearchParams();
   // "Volver a pedir con…": se avisa primero a esa socia durante 10 minutos.
   const preferida = socias.find((s) => s.id === params.get("socia") && s.estado === "aprobada");
   const servicio = config.servicios.find((s) => s.id === (params.get("servicio") as ServicioId)) ?? config.servicios[0];
+  const cotizar = servicio.cotizar;
+  useRubro(servicio.rubro);
+  const promo = cotizar ? promociones.find((p) => p.id === params.get("promo") && p.activa) : undefined;
+  const [modalidad, setModalidad] = useState<"domicilio" | "local">("domicilio");
   const distritos = config.distritos.filter((d) => d.habilitado).map((d) => d.nombre);
 
   const [pos, setPos] = useState(LIMA);
@@ -34,7 +39,7 @@ function Formulario() {
   const [conMateriales, setConMateriales] = useState(false);
   const [notas, setNotas] = useState("");
   // Por defecto se marcan las 5 tareas más comunes de una limpieza.
-  const [tareas, setTareas] = useState<string[]>(servicio.tareas.slice(0, 5));
+  const [tareas, setTareas] = useState<string[]>(cotizar ? [] : servicio.tareas.slice(0, 5));
   const [confirmar, setConfirmar] = useState(false);
   const [frecuenciaElegida, setFrecuencia] = useState<Frecuencia>("unica");
 
@@ -44,7 +49,7 @@ function Formulario() {
   const plan = FRECUENCIAS.find((f) => f.id === frecuencia)!;
   const precio = calcularPrecio(servicio, horas, conMateriales, fechaPedido, config, frecuencia);
   const total = precio.total;
-  const valido = direccion.trim().length > 4 && !!distrito && !fueraDeZona && (cuando === "asap" || !errorFecha(fecha));
+  const valido = (!cotizar || tareas.length > 0) && direccion.trim().length > 4 && !!distrito && !fueraDeZona && (cuando === "asap" || !errorFecha(fecha));
 
   // Pone el distrito detectado si lo atendemos; si no, avisa.
   // Si no se reconoce el distrito, se deja vacío para que la persona lo elija (nunca uno equivocado).
@@ -100,7 +105,8 @@ function Formulario() {
       try {
         const id = await crearPedido({
           servicio: servicio.id, ubicacion: { direccion: [direccion.trim(), interior.trim()].filter(Boolean).join(", "), distrito, referencia, ...pos },
-          fecha: fechaPedido, horas, conMateriales, notas, tareas, recargo: precio.recargo, descuento: precio.descuento, frecuencia, total, sociaPreferida: preferida?.id,
+          fecha: fechaPedido, horas, conMateriales, notas, tareas, recargo: precio.recargo, descuento: precio.descuento, frecuencia, total: cotizar ? 0 : total, sociaPreferida: preferida?.id,
+          modalidad: cotizar ? modalidad : "domicilio", promoId: promo?.id,
         });
         router.replace(`/cliente/pedido/${id}`);
       } catch (e) {
@@ -122,8 +128,43 @@ function Formulario() {
         </div>
       )}
 
+      {promo && (
+        <div className="tarjeta border-2 border-dashed border-acento bg-acento-claro">
+          <p className="font-extrabold">🎁 {promo.titulo} · −{promo.descuentoPct}%</p>
+          <p className="text-sm text-suave">Solo te ofertarán las especialistas que participan en esta promoción. El descuento se aplica a su precio.</p>
+        </div>
+      )}
+
+      {cotizar && (
+        <section className="tarjeta space-y-4">
+          <h3 className="text-lg font-bold">✨ ¿Qué te quieres hacer?</h3>
+          <p className="text-sm text-suave">Puedes elegir varias cosas: la especialista te cotiza todo junto, incluso como paquete.</p>
+          {Object.entries(agruparTareas(servicio.tareas)).map(([grupo, items]) => (
+            <div key={grupo} className="space-y-2">
+              <p className="font-bold">{ICONO_GRUPO[grupo] ?? "•"} {grupo}</p>
+              <div className="grid grid-cols-2 gap-2">
+                {items.map((n) => {
+                  const t = `${grupo} · ${n}`;
+                  return <Opcion key={t} activo={tareas.includes(t)} onClick={() => setTareas(tareas.includes(t) ? tareas.filter((x) => x !== t) : [...tareas, t])}>{tareas.includes(t) ? "✓ " : ""}{n}</Opcion>;
+                })}
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {cotizar && (
+        <section className="tarjeta space-y-3">
+          <h3 className="text-lg font-bold">🏠 ¿Dónde te atienden?</h3>
+          <div className="grid grid-cols-2 gap-2">
+            <Opcion activo={modalidad === "domicilio"} onClick={() => setModalidad("domicilio")}>🏠 A domicilio<span className="block text-sm font-normal text-suave">Va a tu casa</span></Opcion>
+            <Opcion activo={modalidad === "local"} onClick={() => setModalidad("local")}>📍 En su local<span className="block text-sm font-normal text-suave">Tú vas, suele ser más económico</span></Opcion>
+          </div>
+        </section>
+      )}
+
       <section className="tarjeta space-y-3">
-        <h3 className="text-lg font-bold">📍 ¿Dónde?</h3>
+        <h3 className="text-lg font-bold">{cotizar && modalidad === "local" ? "📍 ¿Desde dónde vas? (buscamos locales cerca)" : "📍 ¿Dónde?"}</h3>
         <BuscadorDireccion cerca={pos} onElegir={elegirLugar} />
         <button type="button" className="font-semibold text-marca" onClick={usarMiUbicacion}>📌 Usar mi ubicación actual</button>
         <Mapa lat={pos.lat} lng={pos.lng} onPick={ubicar} />
@@ -145,15 +186,15 @@ function Formulario() {
         <h3 className="text-lg font-bold">🕒 ¿Cuándo?</h3>
         <div className="grid grid-cols-2 gap-2">
           <Opcion activo={cuando === "asap"} onClick={() => setCuando("asap")}>
-            Lo antes posible{config.recargoUrgentePct > 0 && <span className="block text-sm font-normal text-suave">+{config.recargoUrgentePct}% por urgencia</span>}
+            Lo antes posible{!cotizar && config.recargoUrgentePct > 0 && <span className="block text-sm font-normal text-suave">+{config.recargoUrgentePct}% por urgencia</span>}
           </Opcion>
           <Opcion activo={cuando === "programar"} onClick={() => setCuando("programar")}>Elegir fecha</Opcion>
         </div>
-        {cuando === "programar" && config.recargoFindePct > 0 && <p className="text-sm text-suave">Sábados y domingos: +{config.recargoFindePct}%. Así tu socia gana más por trabajar el fin de semana 💪</p>}
+        {cuando === "programar" && !cotizar && config.recargoFindePct > 0 && <p className="text-sm text-suave">Sábados y domingos: +{config.recargoFindePct}%. Así tu socia gana más por trabajar el fin de semana 💪</p>}
         {cuando === "programar" && <ElegirFecha valor={fecha} onChange={setFecha} />}
       </section>
 
-      {cuando === "programar" && (
+      {cuando === "programar" && !cotizar && (
         <section className="tarjeta space-y-3">
           <h3 className="text-lg font-bold">🔁 ¿Cada cuánto?</h3>
           <div className="grid grid-cols-3 gap-2">
@@ -171,7 +212,7 @@ function Formulario() {
         </section>
       )}
 
-      <section className="tarjeta space-y-3">
+      {!cotizar && <section className="tarjeta space-y-3">
         <h3 className="text-lg font-bold">⏱️ ¿Cuántas horas?</h3>
         <div className="flex items-center justify-between">
           <button type="button" className="h-14 w-14 rounded-full bg-marca-claro text-3xl font-bold text-marca" onClick={() => setHoras(Math.max(servicio.horasMin, horas - 1))}>−</button>
@@ -179,9 +220,9 @@ function Formulario() {
           <button type="button" className="h-14 w-14 rounded-full bg-marca-claro text-3xl font-bold text-marca" onClick={() => setHoras(Math.min(10, horas + 1))}>+</button>
         </div>
         <p className="text-center text-sm text-suave">Mínimo {servicio.horasMin} horas</p>
-      </section>
+      </section>}
 
-      {servicio.tareas.length > 0 && (
+      {!cotizar && servicio.tareas.length > 0 && (
         <section className="tarjeta space-y-3">
           <h3 className="text-lg font-bold">✅ ¿Qué necesitas?</h3>
           <p className="text-sm text-suave">Marca lo que quieres que haga la socia. Así sabe qué priorizar en tus {horas} horas.</p>
@@ -196,17 +237,22 @@ function Formulario() {
       )}
 
       <section className="tarjeta space-y-3">
+        {!cotizar && <>
         <h3 className="text-lg font-bold">🧴 Materiales de limpieza</h3>
         <div className="grid gap-2">
           <Opcion activo={!conMateriales} onClick={() => setConMateriales(false)}>Uso los míos (de la casa)</Opcion>
           <Opcion activo={conMateriales} onClick={() => setConMateriales(true)}>Que la socia los lleve (+{soles(servicio.recargoMateriales)})</Opcion>
         </div>
-        <textarea className="campo" rows={3} placeholder="Notas para la socia (ej. tengo mascota, tocar intercomunicador 502)" value={notas} onChange={(e) => setNotas(e.target.value)} />
+        </>}
+        {cotizar && <h3 className="text-lg font-bold">📝 Cuéntale a la especialista</h3>}
+        <textarea className="campo" rows={3} placeholder={cotizar ? "Ej. quiero uñas largas tono nude con diseño en 2 dedos; tengo foto de referencia" : "Notas para la socia (ej. tengo mascota, tocar intercomunicador 502)"} value={notas} onChange={(e) => setNotas(e.target.value)} />
       </section>
 
       <div className="fixed inset-x-0 bottom-0 z-[1000] border-t bg-white p-4">
         <div className="mx-auto flex max-w-md items-center gap-3">
-          <div className="flex-1"><p className="text-sm text-suave">Precio estimado</p><p className="text-2xl font-extrabold">{soles(precio.aPagar)}</p></div>
+          {cotizar
+            ? <div className="flex-1"><p className="font-bold">{tareas.length} servicio{tareas.length === 1 ? "" : "s"}</p><p className="text-sm text-suave">Recibirás precios de especialistas</p></div>
+            : <div className="flex-1"><p className="text-sm text-suave">Precio estimado</p><p className="text-2xl font-extrabold">{soles(precio.aPagar)}</p></div>}
           <button className="btn-primario !w-auto" disabled={!valido} onClick={() => setConfirmar(true)}>Revisar</button>
         </div>
       </div>
@@ -215,6 +261,14 @@ function Formulario() {
         <div className="fixed inset-0 z-[2000] flex items-end bg-black/40" onClick={() => setConfirmar(false)}>
           <div className="mx-auto w-full max-w-md space-y-3 rounded-t-3xl bg-white p-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-xl font-extrabold">Confirma tu pedido</h3>
+            {cotizar ? (
+              <ul className="space-y-1 text-suave">
+                {tareas.map((t) => <li key={t}>{ICONO_GRUPO[t.split(" · ")[0]] ?? "•"} {t}</li>)}
+                <li>{modalidad === "local" ? "📍 En el local de la especialista" : `🏠 A domicilio: ${[direccion, interior].filter(Boolean).join(", ")}, ${distrito}`}</li>
+                <li>🕒 {formatoFecha(cuando === "asap" ? "asap" : fecha)}</li>
+                {promo && <li>🎁 {promo.titulo} (−{promo.descuentoPct}%)</li>}
+              </ul>
+            ) : <>
             <ul className="space-y-1 text-suave">
               <li>{servicio.icono} {servicio.nombre} · {horas} horas</li>
               <li>📍 {[direccion, interior].filter(Boolean).join(", ")}, {distrito}</li>
@@ -229,8 +283,10 @@ function Formulario() {
               {precio.cargoServicio > 0 && <div className="flex justify-between text-suave"><span>Cargo de servicio</span><span>+ {soles(precio.cargoServicio)}</span></div>}
               <div className="flex justify-between text-lg"><span>Total estimado</span><b>{soles(precio.aPagar)}</b></div>
             </div>
+            </>}
+            {cotizar && <p className="rounded-2xl bg-marca-claro p-3 text-sm">Las especialistas cercanas te enviarán su precio. Verás su perfil y sus trabajos, y tú eliges. Nada se cobra hasta que elijas.</p>}
             <p className="text-sm text-suave">Pagas al final por Yape, Plin o efectivo. Si quieres, puedes dejar una propina: va completa a tu socia.</p>
-            <button className="btn-primario" disabled={enviando} onClick={enviar}>{enviando ? "Enviando…" : "Confirmar y buscar socia"}</button>
+            <button className="btn-primario" disabled={enviando} onClick={enviar}>{enviando ? "Enviando…" : cotizar ? "💬 Pedir ofertas" : "Confirmar y buscar socia"}</button>
           </div>
         </div>
       )}

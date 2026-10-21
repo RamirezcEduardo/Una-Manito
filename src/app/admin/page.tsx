@@ -13,7 +13,7 @@ import { VideoVerificacion } from "@/components/PruebaDeVida";
 const MapaDemanda = dynamic(() => import("@/components/MapaDemanda"), { ssr: false, loading: () => <div className="h-[380px] animate-pulse rounded-2xl bg-marca-claro" /> });
 import type { EstadoPedido, Pedido } from "@/lib/tipos";
 
-type Seccion = "resumen" | "pedidos" | "socias" | "verificaciones" | "cobros" | "reclamos" | "usuarios" | "ajustes";
+type Seccion = "resumen" | "pedidos" | "socias" | "verificaciones" | "cobros" | "reclamos" | "usuarios" | "ajustes" | "promos";
 
 const SECCIONES: { id: Seccion; texto: string; icono: string }[] = [
   { id: "resumen", texto: "Resumen", icono: "📊" },
@@ -21,6 +21,7 @@ const SECCIONES: { id: Seccion; texto: string; icono: string }[] = [
   { id: "socias", texto: "Socias", icono: "🧹" },
   { id: "verificaciones", texto: "Verificaciones", icono: "🛡️" },
   { id: "cobros", texto: "Cobros a socias", icono: "💰" },
+  { id: "promos", texto: "Promociones", icono: "🎁" },
   { id: "reclamos", texto: "Reclamaciones", icono: "📕" },
   { id: "usuarios", texto: "Usuarios", icono: "👥" },
   { id: "ajustes", texto: "Ajustes", icono: "⚙️" },
@@ -94,6 +95,7 @@ export default function Admin() {
           {seccion === "reclamos" && <Reclamos />}
           {seccion === "usuarios" && <Usuarios />}
           {seccion === "ajustes" && <Ajustes />}
+          {seccion === "promos" && <Promociones />}
         </main>
       </div>
     </div>
@@ -449,8 +451,10 @@ function Ajustes() {
           <div key={s.id} className="flex items-center gap-2">
             <input type="checkbox" className="h-5 w-5" checked={s.activo} onChange={(e) => setC({ ...c, servicios: c.servicios.map((x, j) => (j === i ? { ...x, activo: e.target.checked } : x)) })} />
             <span className="flex-1">{s.icono} {s.nombre}</span>
+            {s.cotizar ? <span className="text-sm text-suave">por cotización</span> : <>
             <span className="text-suave">S/</span>
             <input type="number" className="campo !w-20 !py-2" value={s.precioHora} onChange={(e) => setC({ ...c, servicios: c.servicios.map((x, j) => (j === i ? { ...x, precioHora: +e.target.value } : x)) })} />
+            </>}
           </div>
         ))}
       </div>
@@ -642,6 +646,41 @@ function Verificaciones() {
           <p className="mt-2 text-xs text-suave">🔒 Los videos se borran al revisarlos (Ley 29733).</p>
         </Tarjeta>
       )}
+    </div>
+  );
+}
+
+function Promociones() {
+  const { promociones, socias, guardarPromo } = useDatos();
+  const [titulo, setTitulo] = useState("");
+  const [descripcion, setDescripcion] = useState("");
+  const [pct, setPct] = useState(15);
+  const participantes = (id: string) => socias.filter((s) => s.promos.includes(id)).length;
+  return (
+    <div className="space-y-4">
+      <Tarjeta titulo="Nueva promoción">
+        <p className="mb-3 text-sm text-suave">Las socias eligen si participan. Los pedidos con promoción solo les llegan a las que participan, y el descuento se aplica a su precio (la comisión se calcula sobre el precio con descuento).</p>
+        <div className="grid gap-3 sm:grid-cols-[1fr_120px]">
+          <input className="campo" placeholder="Título (ej. Mes de la belleza)" value={titulo} onChange={(e) => setTitulo(e.target.value)} />
+          <label className="flex items-center gap-2"><input className="campo" type="number" min={1} max={70} value={pct} onChange={(e) => setPct(Number(e.target.value))} />%</label>
+        </div>
+        <textarea className="campo mt-3" rows={2} placeholder="Descripción para clientas y socias" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
+        <button className="btn-primario mt-3 sm:!w-auto" disabled={titulo.trim().length < 3 || !(pct >= 1 && pct <= 70)}
+          onClick={() => accion(async () => { await guardarPromo({ titulo, descripcion, descuentoPct: pct, activa: true }); setTitulo(""); setDescripcion(""); })}>Crear promoción</button>
+      </Tarjeta>
+      <Tarjeta titulo="Promociones">
+        {promociones.length === 0 && <p className="text-suave">Aún no hay promociones.</p>}
+        <div className="space-y-3">
+          {promociones.map((p) => (
+            <div key={p.id} className="flex flex-wrap items-center gap-3 rounded-2xl border p-4">
+              <div className="flex-1"><b>{p.titulo} · −{p.descuentoPct}%</b>{p.descripcion && <p className="text-sm text-suave">{p.descripcion}</p>}
+                <p className="text-sm">{participantes(p.id)} socia(s) participan</p></div>
+              <button className={`rounded-full px-4 py-2 font-bold ${p.activa ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-700"}`}
+                onClick={() => accion(() => guardarPromo({ ...p, activa: !p.activa }))}>{p.activa ? "✅ Activa · pausar" : "⏸ Pausada · activar"}</button>
+            </div>
+          ))}
+        </div>
+      </Tarjeta>
     </div>
   );
 }

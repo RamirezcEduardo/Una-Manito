@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { ESLOGAN_SOCIA } from "@/lib/config";
 import { useDatos } from "@/lib/store";
 import { EnlaceReclamaciones } from "@/components/Extras";
@@ -25,8 +26,10 @@ const IconoReloj = () => (
 
 export default function Inicio() {
   const { clientes, socias, entrar, demo, config } = useDatos();
-  const activos = config.servicios.filter((s) => s.activo);
-  const precioDesde = Math.min(...(activos.length ? activos : config.servicios).map((s) => s.precioHora));
+  const activos = config.servicios.filter((s) => s.activo && !s.cotizar);
+  const precioDesde = Math.min(...(activos.length ? activos : config.servicios.filter((s) => !s.cotizar)).map((s) => s.precioHora));
+  // La portada siempre se ve con los colores de la marca (azul).
+  useEffect(() => { delete document.documentElement.dataset.rubro; }, []);
   const router = useRouter();
   // En modo demo se entra con usuarios de prueba; con Supabase se inicia sesión con código por correo.
   const ir = (rol: "cliente" | "socia" | "ceo", id: string | undefined, ruta: string) => {
