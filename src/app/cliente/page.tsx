@@ -60,7 +60,7 @@ export default function InicioCliente() {
         {rubro === "belleza" && (
           <div className="tarjeta space-y-3 bg-marca-claro text-center">
             <p className="text-2xl font-extrabold text-marca-oscuro">💅 Belleza a tu manera</p>
-            <p className="text-suave">Uñas, pestañas y cejas en un solo pedido. Las especialistas te mandan su precio y tú eliges, viendo su perfil y sus trabajos.</p>
+            <p className="text-suave">Uñas, pedicure, pestañas, cejas y cabello. Elige lo que quieras: las especialistas te mandan su precio y tú eliges, viendo su perfil y sus trabajos.</p>
             <p className="text-sm font-semibold">🏠 A domicilio o 📍 en su local</p>
           </div>
         )}

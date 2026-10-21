@@ -12,9 +12,11 @@ export const SERVICIOS_INICIALES: Servicio[] = [
   { ...HOGAR, id: "electricidad", nombre: "Electricidad", icono: "💡", eslogan: "Te damos una manito con la luz, al toque.", activo: false, precioHora: 35, horasMin: 1, recargoMateriales: 0, tareas: [] },
   { ...HOGAR, id: "lavado_autos", nombre: "Lavado de autos", icono: "🚗", eslogan: "Te damos una manito con tu auto, al toque.", activo: false, precioHora: 25, horasMin: 1, recargoMateriales: 5, tareas: [] },
   { id: "belleza", nombre: "Belleza", icono: "💅", eslogan: "Te damos una manito para verte linda, al toque.", activo: true, precioHora: 0, horasMin: 1, recargoMateriales: 0, rubro: "belleza", cotizar: true, tareas: [
-    "Uñas · Manicure clásica", "Uñas · Manicure gel", "Uñas · Uñas acrílicas", "Uñas · Polygel", "Uñas · Pedicure clásica", "Uñas · Pedicure spa", "Uñas · Retiro de gel o acrílico",
+    "Uñas · Manicure clásica", "Uñas · Manicure gel", "Uñas · Uñas acrílicas", "Uñas · Polygel", "Uñas · Retiro de gel o acrílico",
+    "Pedicure · Clásica", "Pedicure · Spa", "Pedicure · Gel en pies",
     "Pestañas · Extensiones pelo a pelo", "Pestañas · Extensiones volumen", "Pestañas · Lifting de pestañas", "Pestañas · Retoque de extensiones",
-    "Cejas · Perfilado", "Cejas · Laminado", "Cejas · Henna"] },
+    "Cejas · Perfilado", "Cejas · Laminado", "Cejas · Henna",
+    "Cabello · Corte", "Cabello · Brushing o planchado", "Cabello · Tinte", "Cabello · Mechas o balayage", "Cabello · Alisado o keratina", "Cabello · Peinado para evento"] },
   { ...HOGAR, id: "piscinas", nombre: "Limpieza de piscinas", icono: "🏊", eslogan: "Te damos una manito con tu piscina, al toque.", activo: false, precioHora: 30, horasMin: 2, recargoMateriales: 15, tareas: [] },
 ];
 
@@ -145,7 +147,9 @@ export function agruparTareas(tareas: string[]) {
   for (const t of tareas) { const [g, n] = t.includes(" · ") ? t.split(" · ") : ["Otros", t]; (grupos[g] ??= []).push(n); }
   return grupos;
 }
-export const ICONO_GRUPO: Record<string, string> = { "Uñas": "💅", "Pestañas": "👁️", "Cejas": "✨" };
+export const ICONO_GRUPO: Record<string, string> = { "Uñas": "💅", "Pedicure": "🦶", "Pestañas": "👁️", "Cejas": "✨", "Cabello": "💇‍♀️" };
+/** Categorías que solo se atienden en el local de la especialista. */
+export const SOLO_EN_LOCAL = ["Cabello"];
 
 /** Adicionales que la socia puede sumar a su oferta (cada una pone su precio). */
 export const ADICIONALES_BELLEZA = ["Nail art", "Cristales o piedras", "Francés", "Efecto espejo o cromo", "Parafina", "Exfoliación de pies", "Masaje de manos", "Reparación de uña", "Tinte de pestañas", "Diseño de cejas"];

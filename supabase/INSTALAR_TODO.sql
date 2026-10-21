@@ -1456,3 +1456,21 @@ end $$;
 revoke execute on function public.avisar_oferta() from public, anon, authenticated;
 drop trigger if exists avisar_oferta on public.ofertas;
 create trigger avisar_oferta after insert on public.ofertas for each row execute function public.avisar_oferta();
+
+-- Categorías de belleza separadas (uñas, pedicure, pestañas, cejas, cabello). Cabello: siempre en el local.
+update public.servicios set tareas = array[
+ 'Uñas · Manicure clásica','Uñas · Manicure gel','Uñas · Uñas acrílicas','Uñas · Polygel','Uñas · Retiro de gel o acrílico',
+ 'Pedicure · Clásica','Pedicure · Spa','Pedicure · Gel en pies',
+ 'Pestañas · Extensiones pelo a pelo','Pestañas · Extensiones volumen','Pestañas · Lifting de pestañas','Pestañas · Retoque de extensiones',
+ 'Cejas · Perfilado','Cejas · Laminado','Cejas · Henna',
+ 'Cabello · Corte','Cabello · Brushing o planchado','Cabello · Tinte','Cabello · Mechas o balayage','Cabello · Alisado o keratina','Cabello · Peinado para evento']
+where id = 'belleza';
+create or replace function public.belleza_cabello_en_local() returns trigger
+language plpgsql set search_path = public as $$
+begin
+  -- Los servicios de cabello se hacen en el local de la especialista.
+  if exists (select 1 from unnest(new.tareas) t where t like 'Cabello ·%') then new.modalidad := 'local'; end if;
+  return new;
+end $$;
+drop trigger if exists pedidos_cabello_local on public.pedidos;
+create trigger pedidos_cabello_local before insert on public.pedidos for each row execute function public.belleza_cabello_en_local();

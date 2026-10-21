@@ -5,7 +5,7 @@ import BuscadorDireccion from "@/components/BuscadorDireccion";
 import ElegirFecha, { errorFecha } from "@/components/ElegirFecha";
 import { Mapa } from "@/components/MapaDinamico";
 import { Cabecera, Opcion, Pantalla, accion } from "@/components/ui";
-import { agruparTareas, calcularPrecio, ICONO_GRUPO, DISTRITOS_CALLAO, DISTRITOS_LIMA_TODOS, FRECUENCIAS, formatoFecha, LIMA, soles } from "@/lib/config";
+import { agruparTareas, calcularPrecio, ICONO_GRUPO, SOLO_EN_LOCAL, DISTRITOS_CALLAO, DISTRITOS_LIMA_TODOS, FRECUENCIAS, formatoFecha, LIMA, soles } from "@/lib/config";
 import { direccionDePunto, emparejarDistrito, type Lugar } from "@/lib/geo";
 import { useDatos } from "@/lib/store";
 import { prepararSonido } from "@/lib/avisos";
@@ -22,7 +22,8 @@ function Formulario() {
   const cotizar = servicio.cotizar;
   useRubro(servicio.rubro);
   const promo = cotizar ? promociones.find((p) => p.id === params.get("promo") && p.activa) : undefined;
-  const [modalidad, setModalidad] = useState<"domicilio" | "local">("domicilio");
+  const [modalidadElegida, setModalidad] = useState<"domicilio" | "local">("domicilio");
+  const [categorias, setCategorias] = useState<string[]>([]);
   const distritos = config.distritos.filter((d) => d.habilitado).map((d) => d.nombre);
 
   const [pos, setPos] = useState(LIMA);
@@ -49,6 +50,9 @@ function Formulario() {
   const plan = FRECUENCIAS.find((f) => f.id === frecuencia)!;
   const precio = calcularPrecio(servicio, horas, conMateriales, fechaPedido, config, frecuencia);
   const total = precio.total;
+  // Si pide algo de cabello, se atiende en el local de la especialista.
+  const soloLocal = tareas.some((t) => SOLO_EN_LOCAL.includes(t.split(" · ")[0]));
+  const modalidad = soloLocal ? "local" : modalidadElegida;
   const valido = (!cotizar || tareas.length > 0) && direccion.trim().length > 4 && !!distrito && !fueraDeZona && (cuando === "asap" || !errorFecha(fecha));
 
   // Pone el distrito detectado si lo atendemos; si no, avisa.
@@ -139,9 +143,24 @@ function Formulario() {
         <section className="tarjeta space-y-4">
           <h3 className="text-lg font-bold">✨ ¿Qué te quieres hacer?</h3>
           <p className="text-sm text-suave">Puedes elegir varias cosas: la especialista te cotiza todo junto, incluso como paquete.</p>
-          {Object.entries(agruparTareas(servicio.tareas)).map(([grupo, items]) => (
+          <div className="grid grid-cols-3 gap-2">
+            {Object.keys(agruparTareas(servicio.tareas)).map((g) => {
+              const activo = categorias.includes(g);
+              return (
+                <button key={g} type="button" onClick={() => {
+                  setCategorias(activo ? categorias.filter((x) => x !== g) : [...categorias, g]);
+                  if (activo) setTareas(tareas.filter((t) => !t.startsWith(`${g} · `)));
+                }}
+                  className={`flex flex-col items-center gap-1 rounded-2xl border-2 px-2 py-3 font-bold transition ${activo ? "border-marca bg-marca text-white" : "border-gray-200 bg-white"}`}>
+                  <span className="text-3xl">{ICONO_GRUPO[g] ?? "•"}</span>{g}
+                </button>
+              );
+            })}
+          </div>
+          {categorias.length === 0 && <p className="text-center text-sm text-suave">Toca una o varias categorías.</p>}
+          {Object.entries(agruparTareas(servicio.tareas)).filter(([g]) => categorias.includes(g)).map(([grupo, items]) => (
             <div key={grupo} className="space-y-2">
-              <p className="font-bold">{ICONO_GRUPO[grupo] ?? "•"} {grupo}</p>
+              <p className="font-bold">{ICONO_GRUPO[grupo] ?? "•"} {grupo}{SOLO_EN_LOCAL.includes(grupo) && <span className="ml-2 rounded-full bg-acento-claro px-2 py-0.5 text-xs text-amber-900">📍 en su local</span>}</p>
               <div className="grid grid-cols-2 gap-2">
                 {items.map((n) => {
                   const t = `${grupo} · ${n}`;
@@ -156,8 +175,9 @@ function Formulario() {
       {cotizar && (
         <section className="tarjeta space-y-3">
           <h3 className="text-lg font-bold">🏠 ¿Dónde te atienden?</h3>
+          {soloLocal && <p className="rounded-xl bg-acento-claro p-3 text-sm font-semibold text-amber-900">💇‍♀️ Los servicios de cabello se hacen en el local de la especialista.</p>}
           <div className="grid grid-cols-2 gap-2">
-            <Opcion activo={modalidad === "domicilio"} onClick={() => setModalidad("domicilio")}>🏠 A domicilio<span className="block text-sm font-normal text-suave">Va a tu casa</span></Opcion>
+            <Opcion activo={modalidad === "domicilio"} onClick={() => !soloLocal && setModalidad("domicilio")}>🏠 A domicilio<span className="block text-sm font-normal text-suave">{soloLocal ? "No disponible para cabello" : "Va a tu casa"}</span></Opcion>
             <Opcion activo={modalidad === "local"} onClick={() => setModalidad("local")}>📍 En su local<span className="block text-sm font-normal text-suave">Tú vas, suele ser más económico</span></Opcion>
           </div>
         </section>
