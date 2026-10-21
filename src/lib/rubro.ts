@@ -1,27 +1,23 @@
 "use client";
 // Rubro activo (Hogar o Belleza). Cambia los colores de toda la app y el logo: Belleza se ve en rosado.
+// No se guarda: al abrir la app o volver al inicio, siempre se ve con los colores de la marca.
 import { useEffect, useState } from "react";
 import type { Rubro } from "./tipos";
 
-const CLAVE = "una-manito-rubro";
 const EVENTO = "una-manito-rubro";
-
-const leer = (): Rubro => {
-  try { return localStorage.getItem(CLAVE) === "belleza" ? "belleza" : "hogar"; } catch { return "hogar"; }
-};
+const leer = (): Rubro => (document.documentElement.dataset.rubro === "belleza" ? "belleza" : "hogar");
 
 export function fijarRubro(r: Rubro) {
-  try { localStorage.setItem(CLAVE, r); } catch {}
   document.documentElement.dataset.rubro = r;
   window.dispatchEvent(new Event(EVENTO));
 }
 
-/** Rubro actual. Si se pasa `forzar` (p. ej. el rubro de un pedido abierto), la app cambia a ese rubro. */
+/** Rubro actual. Si se pasa `forzar` (p. ej. el de la pantalla o el pedido abierto), la app cambia a ese rubro. */
 export function useRubro(forzar?: Rubro) {
   const [rubro, setRubro] = useState<Rubro>("hogar");
   useEffect(() => {
     if (forzar) fijarRubro(forzar);
-    const actualizar = () => { const r = leer(); setRubro(r); document.documentElement.dataset.rubro = r; };
+    const actualizar = () => setRubro(leer());
     actualizar();
     window.addEventListener(EVENTO, actualizar);
     return () => window.removeEventListener(EVENTO, actualizar);

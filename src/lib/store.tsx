@@ -83,6 +83,8 @@ const SEMILLA: Datos = {
   seguimiento: {},
   mensajes: [],
   ofertas: [],
+  referidos: [{ invitado: "c2", invitador: "c1", creadoEn: new Date().toISOString() }],
+  misReferidos: { invitados: 0, conServicio: 0 },
   promociones: [{ id: "promo1", titulo: "Mes de la belleza", descripcion: "20% de descuento en tu primera cita de uñas, pestañas o cejas.", descuentoPct: 20, activa: true }],
   // Carmen (socia pendiente) ya envió su prueba de vida; el resto de la demo está verificado.
   verificaciones: [{ usuarioId: "s2", video: "/video/oficios.mp4", gesto: "Gira la cabeza a la derecha", estado: "pendiente", creadoEn: new Date(Date.now() - 3600e3).toISOString() }],
@@ -93,7 +95,7 @@ const SEMILLA: Datos = {
   }],
 };
 
-const CLAVE = "una-manito-demo-v10";
+const CLAVE = "una-manito-demo-v11";
 const nuevoId = (p: string) => p + Math.random().toString(36).slice(2, 8);
 const SIGUIENTE: Partial<Record<EstadoPedido, EstadoPedido>> = { aceptado: "en_camino", en_camino: "en_curso", en_curso: "terminado" };
 
@@ -141,6 +143,11 @@ function DemoProvider({ children }: { children: ReactNode }) {
     verificaciones: d.verificaciones ?? [],
     ofertas: d.ofertas ?? [],
     promociones: d.promociones ?? [],
+    referidos: d.referidos ?? [],
+    misReferidos: (() => {
+      const mios = (d.referidos ?? []).filter((r) => r.invitador === d.sesion?.id);
+      return { invitados: mios.length, conServicio: mios.filter((r) => d.pedidos.some((p) => p.clienteId === r.invitado && p.estado === "terminado")).length };
+    })(),
     listo,
     demo: true,
     sinPerfil: false,
@@ -311,6 +318,12 @@ function DemoProvider({ children }: { children: ReactNode }) {
     guardarPromo: async (p) => {
       if (p.titulo.trim().length < 3) throw new Error("Escribe un título");
       mod((x) => ({ ...x, promociones: p.id ? x.promociones.map((y) => (y.id === p.id ? { ...y, ...p, id: y.id } : y)) : [{ ...p, id: nuevoId("promo") }, ...x.promociones] }));
+    },
+    registrarReferido: async (codigo) => {
+      const yo = d.sesion?.id;
+      const quien = d.usuarios.find((u) => u.id.replace(/-/g, "").slice(0, 8).toUpperCase() === codigo.trim().toUpperCase());
+      if (!yo || !quien || quien.id === yo || (d.referidos ?? []).some((r) => r.invitado === yo)) return;
+      mod((x) => ({ ...x, referidos: [...(x.referidos ?? []), { invitado: yo, invitador: quien.id, creadoEn: new Date().toISOString() }] }));
     },
     reiniciar: () => setD(SEMILLA),
   };

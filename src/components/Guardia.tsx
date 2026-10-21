@@ -6,7 +6,20 @@ import { esEquipo, rutaDeRol } from "@/lib/api";
 import { useDatos } from "@/lib/store";
 
 export default function Guardia({ children }: { children: ReactNode }) {
-  const { demo, listo, sesion, sinPerfil } = useDatos();
+  const { demo, listo, sesion, sinPerfil, registrarReferido } = useDatos();
+  // Enlace de invitación (?ref=CODIGO): se guarda y se vincula cuando la persona ya tiene perfil.
+  useEffect(() => {
+    try {
+      const ref = new URLSearchParams(window.location.search).get("ref");
+      if (ref && /^[A-Za-z0-9]{8}$/.test(ref)) localStorage.setItem("una-manito-ref", ref.toUpperCase());
+      const guardado = localStorage.getItem("una-manito-ref");
+      if (guardado && sesion?.rol === "cliente") {
+        localStorage.removeItem("una-manito-ref");
+        registrarReferido(guardado).catch(() => {});
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sesion?.id]);
   const ruta = usePathname();
   const router = useRouter();
   const seccion = ruta.split("/")[1] as "cliente" | "socia" | "admin" | "";

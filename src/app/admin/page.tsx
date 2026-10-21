@@ -651,7 +651,8 @@ function Verificaciones() {
 }
 
 function Promociones() {
-  const { promociones, socias, guardarPromo } = useDatos();
+  const { promociones, socias, guardarPromo, referidos, usuarios, pedidos } = useDatos();
+  const nombre = (id: string) => usuarios.find((u) => u.id === id)?.nombre ?? "—";
   const [titulo, setTitulo] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [pct, setPct] = useState(15);
@@ -680,6 +681,18 @@ function Promociones() {
             </div>
           ))}
         </div>
+      </Tarjeta>
+      <Tarjeta titulo={`Referidos (${referidos.length})`}>
+        <p className="mb-3 text-sm text-suave">Clientas que se registraron con el enlace de una amiga. “Ya usó” = tiene al menos un servicio terminado (momento de dar el premio).</p>
+        {referidos.length === 0 ? <p className="text-suave">Aún no hay referidos.</p> : (
+          <div className="overflow-x-auto"><table className="w-full text-left text-sm">
+            <thead><tr className="text-suave"><th className="py-2">Invitó</th><th>Invitada</th><th>Fecha</th><th>¿Ya usó?</th></tr></thead>
+            <tbody>{referidos.map((r) => (
+              <tr key={r.invitado} className="border-t"><td className="py-2">{nombre(r.invitador)}</td><td>{nombre(r.invitado)}</td><td>{formatoFecha(r.creadoEn)}</td>
+                <td>{pedidos.some((p) => p.clienteId === r.invitado && p.estado === "terminado") ? "✅ Sí" : "⏳ Aún no"}</td></tr>
+            ))}</tbody>
+          </table></div>
+        )}
       </Tarjeta>
     </div>
   );

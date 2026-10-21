@@ -33,6 +33,10 @@ export interface Datos {
   /** Ofertas de cotización: la clienta ve las de sus pedidos; la socia, las suyas. */
   ofertas: Oferta[];
   promociones: Promocion[];
+  /** Referidos: el equipo ve todos; cada persona, los suyos. */
+  referidos: { invitado: string; invitador: string; creadoEn: string }[];
+  /** Resumen de mis invitadas (cuántas se registraron y cuántas ya usaron un servicio). */
+  misReferidos: { invitados: number; conServicio: number };
 }
 
 export type NuevoPedido = Omit<Pedido, "id" | "estado" | "pago" | "creadoEn" | "clienteId" | "comisionPct" | "propina" | "motivoCancelacion" | "cargoServicio" | "liquidado" | "planOrigen" | "tareasHechas" | "fotos" | "ofertaId">;
@@ -120,6 +124,8 @@ export interface Api extends Datos {
   participarPromo: (promoId: string, participar: boolean) => Promise<void>;
   /** Equipo: crea o edita una promoción. */
   guardarPromo: (p: Omit<Promocion, "id"> & { id?: string }) => Promise<void>;
+  /** Vincula a la persona recién registrada con quien la invitó (código del enlace). */
+  registrarReferido: (codigo: string) => Promise<void>;
   reiniciar: () => void; // solo demo
 }
 

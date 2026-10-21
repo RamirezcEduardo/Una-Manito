@@ -7,7 +7,7 @@ import { CONFIG_INICIAL } from "./config";
 import { supabase as sbOpcional } from "./supabase";
 import type { Calificacion, Pedido, ServicioId } from "./tipos";
 
-const VACIO: Datos = { config: CONFIG_INICIAL, clientes: [], socias: [], pedidos: [], sesion: null, usuarios: [], invitaciones: [], reclamaciones: [], seguimiento: {}, mensajes: [], verificaciones: [], ofertas: [], promociones: [] };
+const VACIO: Datos = { config: CONFIG_INICIAL, clientes: [], socias: [], pedidos: [], sesion: null, usuarios: [], invitaciones: [], reclamaciones: [], seguimiento: {}, mensajes: [], verificaciones: [], ofertas: [], promociones: [], referidos: [], misReferidos: { invitados: 0, conServicio: 0 } };
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function aPedido(r: any, cals: any[]): Pedido {
@@ -106,7 +106,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const [perfiles, socias, privado, pedidos, cals, invitaciones, personales, reclamos, segui, msjs, verifs, ofs, parts] = await Promise.all([
+    const [perfiles, socias, privado, pedidos, cals, invitaciones, personales, reclamos, segui, msjs, verifs, ofs, parts, refs, misRefs] = await Promise.all([
       sb.from("perfiles").select("*"),
       sb.from("socias").select("*"),
       sb.from("socias_privado").select("*"),
@@ -120,6 +120,8 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       sb.from("verificaciones").select("*").order("creado_en", { ascending: false }),
       sb.from("ofertas").select("*").order("precio"),
       sb.from("promo_socias").select("*"),
+      sb.from("referidos").select("*"),
+      sb.rpc("mis_referidos"),
     ]);
     const personal = (id: string) => {
       const p = (personales.data ?? []).find((x: any) => x.id === id);
@@ -134,6 +136,8 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     setD({
       config,
       promociones,
+      referidos: (refs.data ?? []).map((r: any) => ({ invitado: r.invitado, invitador: r.invitador, creadoEn: r.creado_en })),
+      misReferidos: { invitados: Number(misRefs.data?.invitados ?? 0), conServicio: Number(misRefs.data?.con_servicio ?? 0) },
       ofertas: (ofs.data ?? []).map((o: any) => ({ id: o.id, pedidoId: o.pedido_id, sociaId: o.socia_id, precio: Number(o.precio), detalle: o.detalle ?? [], mensaje: o.mensaje ?? undefined, creadoEn: o.creado_en })),
       sesion: yo ? { rol: yo.rol, id: yo.id } : null,
       clientes: ps.map((p: any) => ({ id: p.id, nombre: p.nombre, telefono: p.telefono, email: p.email ?? undefined, foto: p.foto_url ?? undefined, verificado: !!p.verificado })),
@@ -413,6 +417,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       falla(error);
       await cargar();
     },
+    registrarReferido: async (codigo) => { await sb.rpc("registrar_referido", { p_codigo: codigo }); },
     reiniciar: () => {},
   };
 
