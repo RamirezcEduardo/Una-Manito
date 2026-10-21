@@ -125,6 +125,8 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       const p = (personales.data ?? []).find((x: any) => x.id === id);
       return p ? { tipoDocumento: p.tipo_documento, documento: p.documento, fechaNacimiento: p.fecha_nacimiento } : undefined;
     };
+    // Si falla la lectura (sin internet), no se asume "sin perfil": eso mandaría a la persona a registrarse de nuevo.
+    if (perfiles.error) throw new Error(perfiles.error.message);
     const ps = perfiles.data ?? [];
     const yo = ps.find((p: any) => p.id === user.id);
     setSinPerfil(!yo);

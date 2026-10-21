@@ -15,9 +15,13 @@ function Formulario() {
   // ?rol=socia|cliente indica a qué app quiere entrar; ?modo=crear abre directamente "Crear cuenta".
   const rolPedido = params.get("rol") === "socia" ? "socia" : params.get("rol") === "cliente" ? "cliente" : null;
   const rol = rolPedido ?? rolGuardado ?? "cliente";
+  // Al completar el registro manda el tipo de cuenta con que se creó (aunque haya entrado por el otro botón).
+  const rolRegistro = rolGuardado ?? rol;
+  // Si acaba de iniciar sesión aquí, va directo a su panel (aunque haya tocado el botón del otro tipo de cuenta).
+  const [recienEntro, setRecienEntro] = useState(false);
   const [modo, setModo] = useState<Modo>(params.get("modo") === "crear" ? "crear" : "entrar");
   // Hay una sesión abierta de otro tipo (p. ej. cliente) y se pidió entrar como socia: se pregunta antes de redirigir.
-  const otraCuenta = !!sesion && !!rolPedido && sesion.rol !== rolPedido;
+  const otraCuentaPrevia = !!sesion && !!rolPedido && sesion.rol !== rolPedido;
   const [email, setEmail] = useState("");
   const [nombre, setNombre] = useState("");
   const [contrasena, setContrasena] = useState("");
@@ -28,13 +32,14 @@ function Formulario() {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
   const [aviso, setAviso] = useState("");
+  const otraCuenta = otraCuentaPrevia && !recienEntro;
 
   // Ya autenticado: completar registro o ir a su panel.
   useEffect(() => {
     if (!listo) return;
-    if (sinPerfil) router.replace(`/${rol}/registro`);
-    else if (sesion && !otraCuenta) router.replace(rutaDeRol(sesion.rol));
-  }, [listo, sinPerfil, sesion, rol, router, otraCuenta]);
+    if (sinPerfil) router.replace(`/${rolRegistro}/registro`);
+    else if (sesion && (!otraCuenta || recienEntro)) router.replace(rutaDeRol(sesion.rol));
+  }, [listo, sinPerfil, sesion, rolRegistro, router, otraCuenta, recienEntro]);
 
   const correr = async (f: () => Promise<void>) => {
     if (hayAccionEnCurso()) return; // un solo envío por toque
@@ -80,7 +85,7 @@ function Formulario() {
 
       <div className="tarjeta space-y-4">
         {modo === "entrar" && (
-          <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); correr(() => entrarConContrasena(email.trim(), contrasena)); }}>
+          <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); { setRecienEntro(true); correr(async () => { try { await entrarConContrasena(email.trim(), contrasena); } catch (e) { setRecienEntro(false); throw e; } }); } }}>
             <h2 className="text-xl font-extrabold">¡Hola de nuevo! 👋</h2>
             {campoCorreo}
             {campoContrasena("Contraseña", contrasena, setContrasena, "current-password")}
@@ -127,7 +132,7 @@ function Formulario() {
             <button type="button" className="w-full font-semibold text-marca" onClick={() => cambiar("entrar")}>Usar contraseña</button>
           </form>
         ) : (
-          <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); correr(() => verificarCodigo(email.trim(), codigo)); }}>
+          <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); { setRecienEntro(true); correr(async () => { try { await verificarCodigo(email.trim(), codigo); } catch (e) { setRecienEntro(false); throw e; } }); } }}>
             <h2 className="text-xl font-extrabold">Revisa tu correo 📩</h2>
             <p className="text-suave">Escribe el código que enviamos a <b>{email}</b>, o toca el enlace del correo desde este mismo celular.</p>
             <input className="campo text-center text-3xl tracking-[.5em]" inputMode="numeric" autoComplete="one-time-code" maxLength={6}

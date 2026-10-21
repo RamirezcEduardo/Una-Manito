@@ -51,7 +51,7 @@ function Formulario() {
   const precio = calcularPrecio(servicio, horas, conMateriales, fechaPedido, config, frecuencia);
   const total = precio.total;
   // Si pide algo de cabello, se atiende en el local de la especialista.
-  const soloLocal = tareas.some((t) => SOLO_EN_LOCAL.includes(t.split(" · ")[0]));
+  const soloLocal = categorias.some((g) => SOLO_EN_LOCAL.includes(g)) || tareas.some((t) => SOLO_EN_LOCAL.includes(t.split(" · ")[0]));
   const modalidad = soloLocal ? "local" : modalidadElegida;
   const valido = (!cotizar || tareas.length > 0) && direccion.trim().length > 4 && !!distrito && !fueraDeZona && (cuando === "asap" || !errorFecha(fecha));
 

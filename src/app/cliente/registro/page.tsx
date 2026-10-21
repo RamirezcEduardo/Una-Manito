@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CamposPersonales, errorPersonal, PERSONAL_VACIO } from "@/components/DatosPersonales";
 import { AceptoTerminos, AutorizoDatos } from "@/components/Legal";
 import { PruebaDeVida } from "@/components/PruebaDeVida";
@@ -12,6 +12,8 @@ export default function RegistroCliente() {
   const [vida, setVida] = useState<{ video: Blob; gesto: string } | null>(null);
   const router = useRouter();
   const [nombre, setNombre] = useState(nombreGuardado);
+  // El nombre que escribió al crear la cuenta llega después de cargar la sesión.
+  useEffect(() => { if (nombreGuardado) setNombre((n) => n || nombreGuardado); }, [nombreGuardado]);
   const [telefono, setTelefono] = useState("");
   const [email, setEmail] = useState("");
   const [acepto, setAcepto] = useState(false);

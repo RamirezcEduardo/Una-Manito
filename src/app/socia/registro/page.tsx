@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CampoFoto, CamposPersonales, errorPersonal, PERSONAL_VACIO } from "@/components/DatosPersonales";
 import { PruebaDeVida } from "@/components/PruebaDeVida";
 import { AceptoTerminos, AutorizoDatos } from "@/components/Legal";
@@ -16,6 +16,8 @@ export default function RegistroSocia() {
   const { config, registrarSocia, nombreGuardado } = useDatos();
   const router = useRouter();
   const [nombre, setNombre] = useState(nombreGuardado);
+  // El nombre que escribió al crear la cuenta llega después de cargar la sesión.
+  useEffect(() => { if (nombreGuardado) setNombre((n) => n || nombreGuardado); }, [nombreGuardado]);
   const [telefono, setTelefono] = useState("");
   const [personal, setPersonal] = useState(PERSONAL_VACIO);
   const [foto, setFoto] = useState<File | null>(null);

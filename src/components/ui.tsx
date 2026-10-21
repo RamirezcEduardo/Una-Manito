@@ -5,7 +5,7 @@ import { useState, type ReactNode } from "react";
 import { ETIQUETA_ESTADO, nivelSocia } from "@/lib/config";
 import type { Calificacion, EstadoPedido } from "@/lib/tipos";
 import { useDatos } from "@/lib/store";
-import { LOGO, useRubro } from "@/lib/rubro";
+import { fijarRubro, LOGO, useRubro } from "@/lib/rubro";
 
 /**
  * Ejecuta una acción y muestra el error en palabras simples si falla.
@@ -41,6 +41,9 @@ export function mensajeError(e: unknown) {
   if (/email not confirmed/i.test(m)) return "Aún no confirmas tu correo. Revisa tu bandeja (y Spam) y toca el enlace que te enviamos.";
   if (/password should be at least|weak password/i.test(m)) return "La contraseña debe tener al menos 6 caracteres.";
   if (/user already registered/i.test(m)) return "Ese correo ya tiene cuenta. Entra con tu contraseña.";
+  if (/auth session missing|session.*expired|refresh token/i.test(m)) return "Tu sesión o el enlace del correo ya venció. Vuelve a entrar o pide un correo nuevo.";
+  if (/same.*password|different from the old/i.test(m)) return "La nueva contraseña debe ser distinta a la anterior.";
+  if (/signups not allowed/i.test(m)) return "Por ahora no se pueden crear cuentas nuevas. Escríbenos por WhatsApp.";
   if (/token has expired|invalid/i.test(m)) return "El código no es correcto o ya venció. Pide uno nuevo.";
   if (/email rate limit|over_email_send/i.test(m)) return "Se alcanzó el límite de correos por hora. Inténtalo en un rato o escríbenos por WhatsApp.";
   if (/rate limit/i.test(m)) return "Demasiados intentos seguidos. Espera un minuto e inténtalo otra vez.";
@@ -100,7 +103,7 @@ export function Cabecera({ titulo, volver }: { titulo: string; volver?: string }
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={LOGO[rubro]} alt="" className="h-9 w-9 rounded-[10px] ring-2 ring-white/70" />
       <h1 className="flex-1 truncate text-xl font-extrabold">{titulo}</h1>
-      {(sesion || sinPerfil) && <button onClick={async () => { await salir(); router.push("/"); }} className="rounded-full bg-white/20 px-3 py-1 text-sm font-semibold">Salir</button>}
+      {(sesion || sinPerfil) && <button onClick={async () => { await salir(); fijarRubro("hogar"); router.push("/"); }} className="rounded-full bg-white/20 px-3 py-1 text-sm font-semibold">Salir</button>}
     </header>
   );
 }
